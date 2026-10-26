@@ -57,10 +57,34 @@ interface PaymentRow {
   };
 }
 
+interface JudgeRow {
+  id: string;
+  designation?: string | null;
+  company?: string | null;
+  approvalStatus: string;
+  createdAt: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  hackathon: {
+    id: string;
+    title: string;
+    slug: string;
+  };
+}
+
 const STATUS_COLORS: Record<string, string> = {
   DRAFT: "bg-white/5 text-slate-400 border-white/10",
   PUBLISHED: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
   ARCHIVED: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+};
+
+const JUDGE_STATUS_COLORS: Record<string, string> = {
+  PENDING: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+  APPROVED: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+  REJECTED: "bg-rose-500/10 text-rose-400 border-rose-500/20",
 };
 
 export default function HostDashboard() {
@@ -76,11 +100,16 @@ export default function HostDashboard() {
   const [payments, setPayments] = useState<PaymentRow[]>([]);
   const [paymentsLoading, setPaymentsLoading] = useState(false);
 
+  // Judges panel states
+  const [judges, setJudges] = useState<JudgeRow[]>([]);
+  const [judgesLoading, setJudgesLoading] = useState(false);
+
   const loadData = useCallback(async () => {
-    const [meRes, hacksRes, paymentsRes] = await Promise.all([
+    const [meRes, hacksRes, paymentsRes, judgesRes] = await Promise.all([
       fetch("/api/v1/auth/me"),
       fetch("/api/v1/host/hackathons"),
       fetch("/api/v1/host/payments"),
+      fetch("/api/v1/host/judges"),
     ]);
 
     if (meRes.ok) {
@@ -97,6 +126,11 @@ export default function HostDashboard() {
     if (paymentsRes.ok) {
       const d = await paymentsRes.json();
       setPayments(d.payments || []);
+    }
+
+    if (judgesRes.ok) {
+      const d = await judgesRes.json();
+      setJudges(d.judges || []);
     }
 
     setLoading(false);
@@ -123,6 +157,27 @@ export default function HostDashboard() {
       }
     } finally {
       setPublishing(null);
+      setTimeout(() => setActionMsg(null), 4000);
+    }
+  };
+
+  const handleJudgeDecision = async (judgeId: string, action: "APPROVE" | "REJECT") => {
+    try {
+      const res = await fetch(`/api/v1/host/judges/${judgeId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setActionMsg(data.message || `Judge ${action === "APPROVE" ? "approved" : "rejected"} successfully.`);
+        loadData();
+      } else {
+        setActionMsg(`Error: ${data.error}`);
+      }
+    } catch {
+      setActionMsg("Failed to update judge status");
+    } finally {
       setTimeout(() => setActionMsg(null), 4000);
     }
   };
@@ -577,17 +632,115 @@ export default function HostDashboard() {
 
           {/* Judges Tab */}
           {activeTab === "judges" && (
-            <div className="bg-[#0B0E18] border border-white/[0.08] rounded-2xl p-6 space-y-4">
-              <h2 className="text-sm font-bold text-white tracking-tight">
-                Judge Evaluation Panel Management
-              </h2>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Incoming judge applications bound to your hackathon require host confirmation before
-                scores can be logged. Judge approval is implemented in Phase 5.
-              </p>
-              <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/5 text-xs font-mono text-slate-400">
-                No pending judge applications. Judge signup requires a valid hackathon ID.
+            <div className="bg-[#0B0E18] border border-white/[0.08] rounded-2xl overflow-hidden">
+              <div className="p-4 border-b border-white/[0.08] flex items-center justify-between">
+                <div>
+                  <h2 className="text-sm font-bold text-white tracking-tight">
+                    Judge Evaluation Panel Management
+                  </h2>
+                  <p className="text-[11px] text-slate-400 font-mono mt-0.5">
+                    PRD Rule 5: Judges must provide a valid Hackathon ID and receive host confirmation before scoring submissions.
+                  </p>
+                </div>
+                <div className="text-xs font-mono text-slate-400">
+                  Total Evaluators: <span className="text-white font-bold">{judges.length}</span>
+                </div>
               </div>
+
+              {judges.length === 0 ? (
+                <div className="p-12 text-center text-xs font-mono text-slate-500 space-y-2">
+                  <div>No judge applications received yet for your hackathons.</div>
+                  <div className="text-[11px] text-slate-600">
+                    Judges can register at <Link href="/signup/judge" className="text-[#6366F1] hover:underline">/signup/judge</Link> by entering your Hackathon ID.
+                  </div>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs font-mono">
+                    <thead>
+                      <tr className="border-b border-white/[0.06] text-slate-500 uppercase text-[10px] tracking-wider">
+                        <th className="py-2.5 px-4 font-medium">Judge Name</th>
+                        <th className="py-2.5 px-4 font-medium">Organization / Designation</th>
+                        <th className="py-2.5 px-4 font-medium">Applied Hackathon</th>
+                        <th className="py-2.5 px-4 font-medium">Approval Status</th>
+                        <th className="py-2.5 px-4 font-medium text-right">Decision</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/[0.04]">
+                      {judges.map((j) => (
+                        <tr key={j.id} className="hover:bg-white/[0.02] transition-colors">
+                          <td className="py-3 px-4 font-bold text-white">
+                            <div>{j.user.name}</div>
+                            <div className="text-[10px] text-slate-500 font-normal">
+                              {j.user.email}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-slate-300">
+                            <div>{j.company || "Independent Evaluator"}</div>
+                            <div className="text-[10px] text-slate-500">
+                              {j.designation || "Senior Technical Judge"}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-white">
+                            <Link
+                              href={`/hackathons/${j.hackathon.slug}`}
+                              className="hover:text-[#6366F1] transition-colors flex items-center gap-1"
+                            >
+                              {j.hackathon.title}
+                              <ExternalLink className="w-2.5 h-2.5 text-slate-500" />
+                            </Link>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] border font-semibold ${
+                                JUDGE_STATUS_COLORS[j.approvalStatus] || "bg-white/5 text-slate-400"
+                              }`}
+                            >
+                              {j.approvalStatus}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            {j.approvalStatus === "PENDING" ? (
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  onClick={() => handleJudgeDecision(j.id, "APPROVE")}
+                                  className="px-2 py-1 rounded bg-white text-black font-semibold text-[10px] hover:bg-slate-200 transition-colors flex items-center gap-1"
+                                >
+                                  <Check className="w-3 h-3" /> Approve
+                                </button>
+                                <button
+                                  onClick={() => handleJudgeDecision(j.id, "REJECT")}
+                                  className="px-2 py-1 rounded bg-white/5 text-slate-400 hover:text-red-400 text-[10px] transition-colors"
+                                >
+                                  Reject
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-end gap-2 text-[10px] text-slate-500">
+                                {j.approvalStatus === "APPROVED" ? (
+                                  <button
+                                    onClick={() => handleJudgeDecision(j.id, "REJECT")}
+                                    className="text-slate-500 hover:text-red-400 text-[10px] transition-colors underline"
+                                  >
+                                    Revoke
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => handleJudgeDecision(j.id, "APPROVE")}
+                                    className="text-slate-500 hover:text-emerald-400 text-[10px] transition-colors underline"
+                                  >
+                                    Re-approve
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
         </main>

@@ -93,6 +93,9 @@ export async function GET(req: NextRequest) {
         problemStatement: {
           select: { id: true, title: true },
         },
+        codeRepo: true,
+        submission: true,
+        result: true,
       },
       orderBy: { createdAt: "desc" },
     });

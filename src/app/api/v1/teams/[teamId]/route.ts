@@ -54,6 +54,9 @@ export async function GET(
             domain: { select: { name: true, revealAt: true } },
           },
         },
+        codeRepo: true,
+        submission: true,
+        result: true,
       },
     });
 

@@ -39,6 +39,7 @@ interface HackathonItem {
   domains: Array<{
     id: string;
     name: string;
+    revealAt?: string | null;
     problemStatements: Array<{ id: string; title: string }>;
   }>;
   _count?: {
@@ -50,23 +51,11 @@ export default function HomePage() {
   const [hackathons, setHackathons] = useState<HackathonItem[]>([]);
   const [loadingHackathons, setLoadingHackathons] = useState(true);
   const [timeLeft, setTimeLeft] = useState({
-    hours: 18,
-    minutes: 42,
-    seconds: 15,
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
   });
-
-  // Simulated server countdown for active track reveal
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev.seconds > 0) return { ...prev, seconds: prev.seconds - 1 };
-        if (prev.minutes > 0) return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
-        if (prev.hours > 0) return { ...prev, hours: prev.hours - 1, minutes: 59, seconds: 59 };
-        return { hours: 0, minutes: 0, seconds: 0 };
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
+  const [isUnlocked, setIsUnlocked] = useState(false);
 
   // Fetch real hackathon data from database
   useEffect(() => {
@@ -81,6 +70,61 @@ export default function HomePage() {
         setLoadingHackathons(false);
       });
   }, []);
+
+  const featured = hackathons.length > 0 ? hackathons[0] : null;
+
+  // Real-time server-clock countdown targeting actual domain revealAt or hackathon startAt
+  useEffect(() => {
+    if (!featured) return;
+
+    const now = Date.now();
+    let candidateTarget: Date | null = null;
+
+    if (featured.domains && featured.domains.length > 0) {
+      const futureReveals = featured.domains
+        .map((d) => (d.revealAt ? new Date(d.revealAt) : null))
+        .filter((d): d is Date => d !== null && d.getTime() > now)
+        .sort((a, b) => a.getTime() - b.getTime());
+
+      if (futureReveals.length > 0) {
+        candidateTarget = futureReveals[0];
+      }
+    }
+
+    if (!candidateTarget && featured.startAt) {
+      const start = new Date(featured.startAt);
+      if (start.getTime() > now) {
+        candidateTarget = start;
+      }
+    }
+
+    const calculateTime = () => {
+      if (!candidateTarget) {
+        setTimeLeft({ hours: 0, minutes: 0, seconds: 0 });
+        setIsUnlocked(true);
+        return;
+      }
+      const diff = candidateTarget.getTime() - Date.now();
+      if (diff <= 0) {
+        setTimeLeft({ hours: 0, minutes: 0, seconds: 0 });
+        setIsUnlocked(true);
+      } else {
+        setIsUnlocked(false);
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+        setTimeLeft({ hours, minutes, seconds });
+      }
+    };
+
+    calculateTime();
+    const timer = setInterval(calculateTime, 1000);
+    return () => clearInterval(timer);
+  }, [featured]);
+
+  const totalStatements = featured?.domains?.reduce((sum, d) => sum + (d.problemStatements?.length || 0), 0) || 0;
+  const totalTeams = featured?._count?.teams || 0;
+  const capValue = totalStatements > 0 ? Math.ceil(totalTeams / totalStatements) : 0;
 
   return (
     <div className="relative w-full flex flex-col items-center overflow-hidden">
@@ -153,9 +197,9 @@ export default function HomePage() {
             <div className="w-full max-w-md glass-panel-architectural p-6 rounded-2xl space-y-5 border border-white/10">
               <div className="flex items-center justify-between border-b border-white/10 pb-4">
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-emerald-400" />
+                  <div className={`w-2 h-2 rounded-full ${featured ? "bg-emerald-400" : "bg-slate-400"}`} />
                   <span className="text-xs font-mono font-semibold tracking-wider text-slate-300 uppercase">
-                    Live Arena Telemetry
+                    {featured ? "Live Arena Telemetry" : "Telemetry Standby"}
                   </span>
                 </div>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/5 border border-white/10 text-slate-400">
@@ -165,47 +209,66 @@ export default function HomePage() {
 
               <div className="space-y-1.5">
                 <div className="text-[11px] font-mono uppercase tracking-wider text-[#6366F1]">
-                  Featured National Track
+                  {featured ? "Featured Track" : "Platform Protocol"}
                 </div>
                 <h3 className="text-lg font-bold text-white tracking-tight">
-                  HackBridge National Grand Arena 2026
+                  {featured ? featured.title : "Arena Standby: Protocol Ready"}
                 </h3>
                 <p className="text-xs text-slate-400">
-                  Organized by MIT Tech Chapter · Multi-Domain Problem Reveal
+                  {featured
+                    ? `Organized by ${featured.host?.orgName || "Collegiate Host"} · ${featured.domains?.length || 0} Domain${(featured.domains?.length || 0) === 1 ? "" : "s"}`
+                    : "Zero active public arenas currently published"}
                 </p>
               </div>
 
               <div className="p-4 rounded-xl bg-black/40 border border-white/5 space-y-2">
                 <div className="text-[10px] font-mono uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                   <Clock className="w-3.5 h-3.5 text-slate-400" />
-                  Problem Statement Unlock In:
+                  {isUnlocked ? "Problem Statement Status:" : "Problem Statement Unlock In:"}
                 </div>
-                <div className="grid grid-cols-3 gap-2 text-center font-mono">
-                  <div className="p-2 rounded-lg bg-white/[0.03] border border-white/5">
-                    <div className="text-xl font-bold text-white">{String(timeLeft.hours).padStart(2, "0")}</div>
-                    <div className="text-[9px] text-slate-500 uppercase">Hours</div>
+                {isUnlocked ? (
+                  <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-center font-mono">
+                    <div className="text-sm font-bold text-emerald-400 tracking-wider">
+                      ALLOCATION & SELECTION ACTIVE
+                    </div>
+                    <div className="text-[10px] text-slate-400 mt-0.5">
+                      Server-synchronized row locking enabled
+                    </div>
                   </div>
-                  <div className="p-2 rounded-lg bg-white/[0.03] border border-white/5">
-                    <div className="text-xl font-bold text-white">{String(timeLeft.minutes).padStart(2, "0")}</div>
-                    <div className="text-[9px] text-slate-500 uppercase">Minutes</div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-2 text-center font-mono">
+                    <div className="p-2 rounded-lg bg-white/[0.03] border border-white/5">
+                      <div className="text-xl font-bold text-white">{String(timeLeft.hours).padStart(2, "0")}</div>
+                      <div className="text-[9px] text-slate-500 uppercase">Hours</div>
+                    </div>
+                    <div className="p-2 rounded-lg bg-white/[0.03] border border-white/5">
+                      <div className="text-xl font-bold text-white">{String(timeLeft.minutes).padStart(2, "0")}</div>
+                      <div className="text-[9px] text-slate-500 uppercase">Minutes</div>
+                    </div>
+                    <div className="p-2 rounded-lg bg-white/[0.03] border border-white/5">
+                      <div className="text-xl font-bold text-[#6366F1]">{String(timeLeft.seconds).padStart(2, "0")}</div>
+                      <div className="text-[9px] text-slate-500 uppercase">Seconds</div>
+                    </div>
                   </div>
-                  <div className="p-2 rounded-lg bg-white/[0.03] border border-white/5">
-                    <div className="text-xl font-bold text-[#6366F1]">{String(timeLeft.seconds).padStart(2, "0")}</div>
-                    <div className="text-[9px] text-slate-500 uppercase">Seconds</div>
-                  </div>
-                </div>
+                )}
               </div>
 
               <div className="text-[11px] font-mono text-slate-400 flex items-center justify-between pt-1">
                 <span className="text-slate-500">Allocation Cap:</span>
-                <span className="text-slate-200">⌈ Teams / Statements ⌉</span>
+                <span className="text-slate-200">
+                  {featured
+                    ? totalStatements > 0
+                      ? `⌈ ${totalTeams} / ${totalStatements} ⌉ = ${capValue} max / problem`
+                      : "Atomic Row-Locked"
+                    : "Enforced at Transaction Layer"}
+                </span>
               </div>
 
               <Link
-                href="/hackathons/hackbridge-national-2026/apply"
+                href={featured ? `/hackathons/${featured.slug}/apply` : "/hackathons"}
                 className="w-full py-2.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-white text-xs font-semibold flex items-center justify-center gap-2 border border-white/10 transition-colors"
               >
-                Register Squad as Lead
+                {featured ? "Register Squad as Lead" : "Explore Arena Registry"}
                 <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
               </Link>
             </div>

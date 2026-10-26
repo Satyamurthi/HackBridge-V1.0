@@ -54,6 +54,16 @@ interface TeamItem {
     status: string;
     txnRef?: string | null;
   } | null;
+  problemStatement?: {
+    id: string;
+    title: string;
+  } | null;
+  codeRepo?: {
+    id: string;
+    githubRepoUrl: string;
+    storagePath?: string | null;
+    lastPushAt?: string | null;
+  } | null;
 }
 
 export default function StudentDashboard() {
@@ -416,16 +426,112 @@ export default function StudentDashboard() {
 
           {/* Repos Tab */}
           {activeTab === "repos" && (
-            <div className="bg-[#0B0E18] border border-white/[0.08] rounded-2xl p-6 space-y-4">
-              <h2 className="text-sm font-bold text-white tracking-tight">
-                Code Repositories
-              </h2>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Repositiories are linked dynamically to your verified Team ID on event launch day.
-              </p>
-              <div className="p-4 rounded-xl bg-black/40 border border-white/5 text-xs font-mono text-slate-500">
-                Active repositories will populate here during live hackathon hours.
+            <div className="bg-[#0B0E18] border border-white/[0.08] rounded-2xl overflow-hidden">
+              <div className="p-4 border-b border-white/[0.08] flex items-center justify-between">
+                <div>
+                  <h2 className="text-sm font-bold text-white tracking-tight">
+                    Provisioned GitHub Repositories
+                  </h2>
+                  <p className="text-[11px] text-slate-400 font-mono mt-0.5">
+                    PRD Rule 4: Automated GitHub repository titled by Team ID with live commit tracking.
+                  </p>
+                </div>
+                <div className="text-xs font-mono text-slate-400">
+                  Repositories: <span className="text-white font-bold">{teams.filter((t) => t.codeRepo || t.teamId).length}</span>
+                </div>
               </div>
+
+              {teams.filter((t) => t.codeRepo || t.teamId).length === 0 ? (
+                <div className="p-12 text-center text-xs font-mono text-slate-500 space-y-2">
+                  <div>No provisioned repositories yet.</div>
+                  <p className="text-[11px] text-slate-600 max-w-md mx-auto">
+                    When your team verifies payment and selects an unlocked problem statement in the Live Arena, a repository named after your official Team ID will be provisioned automatically.
+                  </p>
+                  <Link
+                    href="/dashboard/student"
+                    onClick={() => setActiveTab("overview")}
+                    className="inline-block mt-2 text-[#6366F1] hover:underline text-xs"
+                  >
+                    View Active Squads →
+                  </Link>
+                </div>
+              ) : (
+                <div className="divide-y divide-white/[0.04]">
+                  {teams
+                    .filter((t) => t.codeRepo || t.teamId)
+                    .map((t) => {
+                      const repoUrl =
+                        t.codeRepo?.githubRepoUrl ||
+                        `https://github.com/hackbridge-org/hackbridge-${t.teamId || t.name.toLowerCase().replace(/[^a-z0-9]/g, "-")}`;
+                      const repoName = `hackbridge-${t.teamId || "pending"}`;
+
+                      return (
+                        <div key={t.id} className="p-5 hover:bg-white/[0.01] transition-colors space-y-3">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <Code2 className="w-4 h-4 text-[#6366F1]" />
+                              <span className="font-mono text-sm font-bold text-white tracking-wide">
+                                {repoName}
+                              </span>
+                              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold">
+                                {t.teamId ? "PROVISIONED" : "PENDING ALLOCATION"}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <Link
+                                href={`/dashboard/student/arena/${t.id}`}
+                                className="px-3 py-1 rounded bg-white text-black font-semibold text-xs hover:bg-slate-200 transition-colors inline-flex items-center gap-1 font-mono"
+                              >
+                                Live Workspace Arena →
+                              </Link>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs font-mono pt-1">
+                            <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/5 space-y-0.5">
+                              <div className="text-[10px] text-slate-500 uppercase">Squad / Hackathon</div>
+                              <div className="text-white font-medium truncate">
+                                {t.name} · {t.hackathon.title}
+                              </div>
+                            </div>
+
+                            <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/5 space-y-0.5">
+                              <div className="text-[10px] text-slate-500 uppercase">Assigned Statement</div>
+                              <div className="text-slate-300 font-medium truncate">
+                                {t.problemStatement?.title || "Pending domain selection"}
+                              </div>
+                            </div>
+
+                            <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/5 space-y-0.5">
+                              <div className="text-[10px] text-slate-500 uppercase">Last Synchronization</div>
+                              <div className="text-slate-300 font-medium">
+                                {t.codeRepo?.lastPushAt
+                                  ? new Date(t.codeRepo.lastPushAt).toLocaleString()
+                                  : "Initialized on event launch"}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Clone snippet */}
+                          <div className="flex items-center justify-between p-2.5 rounded-lg bg-black/50 border border-white/5 text-[11px] font-mono text-slate-400 overflow-x-auto">
+                            <span className="truncate mr-2 select-all">
+                              git clone {repoUrl}.git
+                            </span>
+                            <a
+                              href={repoUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs text-[#6366F1] hover:underline flex items-center gap-1 shrink-0"
+                            >
+                              Open on GitHub <ExternalLink className="w-3 h-3" />
+                            </a>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
             </div>
           )}
 
@@ -435,7 +541,7 @@ export default function StudentDashboard() {
               <h2 className="text-sm font-bold text-white tracking-tight">
                 Verified Engineering Profile
               </h2>
-              <div className="grid grid-cols-2 gap-4 text-xs font-mono">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs font-mono">
                 <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5 space-y-1">
                   <div className="text-slate-500 uppercase text-[10px]">Name</div>
                   <div className="text-white font-bold">{session.name}</div>
@@ -451,6 +557,16 @@ export default function StudentDashboard() {
                 <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5 space-y-1">
                   <div className="text-slate-500 uppercase text-[10px]">College / University</div>
                   <div className="text-white font-bold">{profile.college || "Collegiate Engineer"}</div>
+                </div>
+                <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5 space-y-1">
+                  <div className="text-slate-500 uppercase text-[10px]">GitHub Username</div>
+                  <div className="text-slate-300 font-bold">
+                    {profile.githubUsername ? `@${profile.githubUsername}` : "Not linked"}
+                  </div>
+                </div>
+                <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5 space-y-1">
+                  <div className="text-slate-500 uppercase text-[10px]">Contact Phone</div>
+                  <div className="text-slate-300 font-bold">{profile.phone || "Not specified"}</div>
                 </div>
               </div>
             </div>
