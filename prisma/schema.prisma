@@ -1,0 +1,340 @@
+// HackBridge Prisma Data Model (matches PRD Section 5 exactly)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite" // Configurable to postgresql via DATABASE_URL
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String          @id @default(uuid())
+  email         String          @unique
+  passwordHash  String
+  role          String          // "STUDENT", "HOST", "JUDGE", "SUPER_ADMIN"
+  status        String          @default("ACTIVE") // "ACTIVE", "PENDING", "PAUSED", "REJECTED"
+  name          String
+  phone         String?
+  avatarUrl     String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  studentProfile StudentProfile?
+  hostProfile    HostProfile?
+  judgeProfiles  JudgeProfile[]
+  auditLogs      AuditLog[]
+  notifications  Notification[]
+
+  @@map("users")
+}
+
+model StudentProfile {
+  id             String       @id @default(uuid())
+  userId         String       @unique
+  hackathonId    String       @unique // Permanent format: HB-XXXXXX
+  college        String
+  githubUsername String?
+  bio            String?
+  skills         String?      // JSON or comma-separated string
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ledTeams       Team[]       @relation("TeamLead")
+  teamMemberships TeamMember[]
+
+  @@map("students")
+}
+
+model HostProfile {
+  id              String       @id @default(uuid())
+  userId          String       @unique
+  orgName         String
+  type            String       // "college" or "company"
+  approvalStatus  String       @default("PENDING") // "PENDING", "APPROVED", "PAUSED", "REJECTED"
+  membershipStatus String      @default("ACTIVE")
+  website         String?
+  bio             String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hackathons      Hackathon[]
+
+  @@map("hosts")
+}
+
+model JudgeProfile {
+  id             String       @id @default(uuid())
+  userId         String
+  hackathonId    String       // Bound to a specific hackathon ID
+  approvalStatus String       @default("PENDING") // "PENDING", "APPROVED", "REJECTED"
+  designation    String?
+  company        String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hackathon      Hackathon    @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
+  scores         Score[]
+
+  @@unique([userId, hackathonId])
+  @@map("judges")
+}
+
+model Hackathon {
+  id             String            @id @default(uuid())
+  hostId         String
+  title          String
+  slug           String            @unique
+  description    String
+  rules          String
+  rulesGate      Boolean           @default(false)
+  teamMin        Int               @default(1)
+  teamMax        Int               @default(4)
+  fee            Float             @default(0.0) // INR
+  paymentMode    String            @default("FREE") // "RAZORPAY", "QR", "FREE"
+  qrImageUrl     String?
+  upiId          String?
+  status         String            @default("DRAFT") // "DRAFT", "PUBLISHED", "ARCHIVED"
+  bannerUrl      String?
+  prizePool      String?
+  startAt        DateTime
+  endAt          DateTime
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  host           HostProfile       @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  domains        Domain[]
+  teams          Team[]
+  judges         JudgeProfile[]
+  rubricCriteria RubricCriterion[]
+  results        Result[]
+
+  @@map("hackathons")
+}
+
+model Domain {
+  id                String             @id @default(uuid())
+  hackathonId       String
+  name              String
+  description       String?
+  revealAt          DateTime           // Server clock unlock time
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  hackathon         Hackathon          @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
+  problemStatements ProblemStatement[]
+
+  @@map("domains")
+}
+
+model ProblemStatement {
+  id          String   @id @default(uuid())
+  domainId    String
+  title       String
+  description String
+  cap         Int      @default(0) // Ceil(teams / statements)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  domain      Domain   @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  teams       Team[]
+
+  @@map("problem_statements")
+}
+
+model Team {
+  id                 String            @id @default(uuid())
+  teamId             String?           @unique // Generated only after verified payment: TEAM-XXXXXX
+  hackathonId        String
+  leadStudentId      String
+  problemStatementId String?
+  name               String
+  status             String            @default("PENDING") // "PENDING", "ACTIVE", "SUBMITTED", "DISQUALIFIED"
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  hackathon          Hackathon         @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
+  leadStudent        StudentProfile    @relation("TeamLead", fields: [leadStudentId], references: [id], onDelete: Cascade)
+  problemStatement   ProblemStatement? @relation(fields: [problemStatementId], references: [id])
+  members            TeamMember[]
+  payment            Payment?
+  progressUpdates    ProgressUpdate[]
+  codeRepo           CodeRepo?
+  submission         Submission?
+  result             Result?
+
+  @@map("teams")
+}
+
+model TeamMember {
+  id        String         @id @default(uuid())
+  teamId    String
+  studentId String
+  role      String         @default("MEMBER") // "LEAD" or "MEMBER"
+  joinedAt  DateTime       @default(now())
+
+  team      Team           @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, studentId])
+  @@map("team_members")
+}
+
+model Payment {
+  id                String    @id @default(uuid())
+  teamId            String    @unique
+  mode              String    // "RAZORPAY", "QR", "FREE"
+  razorpayOrderId   String?
+  razorpayPaymentId String?
+  txnRef            String?
+  screenshotUrl     String?
+  status            String    @default("PENDING") // "PENDING", "VERIFIED", "REJECTED", "REFUNDED"
+  amount            Float     @default(0.0)
+  approvedBy        String?   // Host user ID who approved QR
+  verifiedAt        DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  team              Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
+
+model ProgressUpdate {
+  id        String   @id @default(uuid())
+  teamId    String
+  percent   Int      // 10, 20, 30 ... 100
+  note      String
+  createdAt DateTime @default(now())
+
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@map("progress_updates")
+}
+
+model CodeRepo {
+  id            String    @id @default(uuid())
+  teamId        String    @unique
+  githubRepoUrl String?
+  storagePath   String?
+  lastPushAt    DateTime?
+  commitHash    String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  team          Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@map("code_repos")
+}
+
+model Submission {
+  id           String    @id @default(uuid())
+  teamId       String    @unique
+  link         String?
+  fileUrl      String?
+  description  String
+  submittedAt  DateTime  @default(now())
+  locked       Boolean   @default(true)
+  unlockedBy   String?
+  unlockReason String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  team         Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  scores       Score[]
+
+  @@map("submissions")
+}
+
+model RubricCriterion {
+  id          String    @id @default(uuid())
+  hackathonId String
+  name        String
+  weight      Float     @default(1.0)
+  maxScore    Float     @default(10.0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  hackathon   Hackathon @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
+  scores      Score[]
+
+  @@map("rubric_criteria")
+}
+
+model Score {
+  id           String          @id @default(uuid())
+  submissionId String
+  judgeId      String
+  criterionId  String
+  score        Float
+  notes        String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  submission   Submission      @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  judge        JudgeProfile    @relation(fields: [judgeId], references: [id], onDelete: Cascade)
+  criterion    RubricCriterion @relation(fields: [criterionId], references: [id], onDelete: Cascade)
+
+  @@unique([submissionId, judgeId, criterionId])
+  @@map("scores")
+}
+
+model Result {
+  id          String    @id @default(uuid())
+  hackathonId String
+  teamId      String    @unique
+  rank        Int
+  award       String
+  prize       String?
+  publishedAt DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  hackathon   Hackathon @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
+  team        Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@map("results")
+}
+
+model SiteContent {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  jsonValue String   // Serialized JSON content blocks
+  version   Int      @default(1)
+  published Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("site_content")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  actorId   String
+  action    String
+  entity    String
+  entityId  String
+  metadata  String?  // JSON string
+  createdAt DateTime @default(now())
+
+  actor     User     @relation(fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@map("audit_logs")
+}
+
+model Notification {
+  id        String    @id @default(uuid())
+  userId    String
+  type      String
+  payload   String    // JSON string
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}

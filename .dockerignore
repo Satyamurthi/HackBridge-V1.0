@@ -1,0 +1,12 @@
+Dockerfile
+.dockerignore
+node_modules
+.next
+.git
+.env*.local
+.env
+tests
+*.log
+npm-debug.log*
+.agents
+.gemini

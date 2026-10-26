@@ -1,0 +1,699 @@
+HackBridge — PRD & Build Prompt
+
+Oct 26, 2026 · @Satyu
+
+1. Product overview
+
+HackBridge is a web platform where colleges and companies host hackathons and students apply, pay, compete, submit and keep their work, all in one place. The target is a production-ready v1 with four roles, automated team and payment flows, fair problem-statement allocation and judge scoring.
+
+Problem. Hackathon organizers juggle forms, payment screenshots, spreadsheets and chat groups. Students have no single identity, no proof of past participation and no place to keep their code.
+
+Goals
+
+Let a host publish and run a full hackathon from one dashboard, end to end.
+
+Give every student one permanent Hackathon ID and one-click team formation.
+
+Verify payments automatically (Razorpay) or manually (QR) before issuing a Team ID.
+
+Allocate problem statements fairly: equal teams per statement, first come first served.
+
+Store every team's code in GitHub, named by Team ID, viewable and downloadable later.
+
+Give the super admin universal control over hosts, content and site layout.
+
+Success metrics (first 6 months)
+
+Metric
+
+Target
+
+Hosts onboarded and approved
+
+25
+
+Hackathons completed
+
+40
+
+Student signups
+
+5,000
+
+Payment verification (Razorpay) success rate
+
+98% or higher
+
+Problem-statement allocation errors (overbooked slots)
+
+0
+
+Page load, p95 on 4G
+
+under 3 seconds
+
+Out of scope for v1: native mobile apps, in-platform video calls, automated plagiarism detection, multi-currency payments.
+
+Assumptions to confirm: INR only; one problem statement per team; max team size is set per hackathon by the host; students can edit profile details but never their Hackathon ID.
+
+2. Roles and permissions
+
+Four roles, each with its own signup, login and dashboard. Hosts and judges cannot act until approved.
+
+Capability
+
+Student
+
+Team lead
+
+Host
+
+Judge
+
+Super admin
+
+Sign up and get Hackathon ID
+
+Yes
+
+Yes
+
+n/a
+
+n/a
+
+n/a
+
+Apply to a hackathon
+
+No
+
+Yes
+
+No
+
+No
+
+No
+
+Add teammates by ID
+
+No
+
+Yes
+
+No
+
+No
+
+No
+
+Update progress, submit project
+
+Own team
+
+Own team
+
+No
+
+No
+
+No
+
+View stored code
+
+Own team
+
+Own team
+
+Own event
+
+Own event
+
+All
+
+Create and publish hackathons
+
+No
+
+No
+
+After approval
+
+No
+
+Yes
+
+Approve payments (QR)
+
+No
+
+No
+
+Own event
+
+No
+
+Yes
+
+Approve judges
+
+No
+
+No
+
+Own event
+
+No
+
+Yes
+
+Score submissions
+
+No
+
+No
+
+No
+
+Assigned event
+
+No
+
+Approve, pause or delete hosts
+
+No
+
+No
+
+No
+
+No
+
+Yes
+
+Edit site layout, columns, content
+
+No
+
+No
+
+No
+
+No
+
+Yes
+
+Approval states. Host: pending, approved, paused, rejected. Judge: pending, approved, rejected, tied to one hackathon ID. Paused hosts keep read-only access and cannot publish or receive new registrations.
+
+3. Functional requirements
+
+Each module lists what must work for release. IDs (FR-x) are for tracking.
+
+FR-1 Authentication and identity
+
+Email plus password signup with email verification, plus Google login for students.
+
+On student signup the system generates a unique, permanent Hackathon ID (format HB-XXXXXX), shown with copy and share buttons.
+
+Separate signup flows for student, host and judge. Host signup lands on a pending-approval screen. Judge signup requires a hackathon ID, otherwise the request is rejected.
+
+Password reset, session management, rate-limited login.
+
+FR-2 Hackathon listing and discovery
+
+Public list with search and filters (host, date, mode, fee, domain) and a live countdown on each card.
+
+Detail page: banner, host, rules, prize pool, schedule, domains with their own countdown timers, fee, deadline.
+
+FR-3 Host hackathon builder
+
+Multi-step wizard: basics, rules, domains with exact start date and time, problem statements (hidden until the timer ends), team size limits, fee, payment method, judging rubric, GitHub credentials, publish.
+
+Rules gate toggle: either show rules and require agreement before applying, or send students straight to apply.
+
+Publish is blocked until the host is approved by the super admin.
+
+FR-4 Team formation and application
+
+Only the team lead can open the apply form. The lead enters teammate Hackathon IDs; each is validated live (exists, not already in another hackathon, not already in this team).
+
+Duplicate application by any member is rejected with a clear message.
+
+After teammates are added the lead goes directly to payment.
+
+FR-5 Payments
+
+Razorpay mode: host stores credentials (encrypted); checkout, webhook verification, then Team ID auto-generated.
+
+QR mode: host uploads QR; team submits transaction ID and screenshot; host approves or rejects; Team ID is generated only on approval.
+
+Payment status visible to team and host: pending, verified, rejected, refunded.
+
+FR-6 Problem-statement allocation
+
+Statements stay hidden until the host-set timer reaches zero, then unlock together in real time.
+
+Per-statement cap = ceil(registered teams / number of statements). Selection is first come first served; a full statement locks instantly for everyone.
+
+Selection must be atomic (no two teams can take the last slot) and final.
+
+FR-7 Live hackathon workspace
+
+Progress scale from 10% to 100% in 10% steps; teams are prompted to update every 30 minutes and every update is timestamped in a timeline.
+
+Judges and the host see all teams' progress live. Teams cannot see other teams' progress or results.
+
+Code storage: upload files or a zip; each team's code is pushed automatically to a new GitHub repository named after the Team ID, using the credentials the admin configured.
+
+FR-8 Submission
+
+One-time final submission: project link, or uploaded application or .exe file, plus a required description of how it works.
+
+Confirmation dialog states that submission cannot be changed. After submission the form and uploads are locked.
+
+Uploaded files are virus-scanned and size-limited.
+
+FR-9 Judging
+
+Host defines rubric criteria and weights; any number of judges per hackathon, each approved by the host.
+
+Judges open each team's submission and stored code, enter scores per criterion and notes. Weighted totals and ranking are computed automatically.
+
+Scores are visible only to the host, super admin and the judge who entered them. Teams see only their own final result.
+
+FR-10 Results and history
+
+Host publishes winners. Students get a hackathon history page: events attended, team members, award and prize, stored code with view and download.
+
+FR-11 Super admin panel
+
+Approve, add, delete and pause hosts and judges; moderate or remove any hackathon; view all users.
+
+Site CMS: edit landing page sections, text, banners, navigation, footer, columns and theme, with preview and publish.
+
+Global settings: GitHub organisation and token, payment and email settings.
+
+Platform analytics and audit log of all admin actions.
+
+FR-12 Notifications
+
+Email and in-app notifications for approvals, payment status, timer start, 30-minute progress reminders, submission confirmation and results.
+
+4. Business rules and edge cases
+
+Rule
+
+Behaviour
+
+Edge case handling
+
+One student, one hackathon
+
+A Hackathon ID can belong to only one active registration at a time
+
+Enforced by a database unique constraint, not only UI checks; lead sees which teammate is blocked
+
+Team lead owns applying
+
+Only the lead applies and adds members
+
+Teammates see an "added to team" notice; lead cannot add themselves twice
+
+Team ID after payment only
+
+Razorpay: after verified webhook. QR: after host approval
+
+If payment fails or is rejected, members are released and can apply again
+
+Slot balancing
+
+Cap per statement = ceil(teams / statements)
+
+Recalculate cap if the host changes team count before the timer; lock after unlock
+
+First come first served
+
+Atomic transaction with row lock on the statement
+
+Two simultaneous picks: one wins, the other gets "slot just filled, choose another"
+
+Timer-based reveal
+
+Server time is the only clock
+
+Client countdown syncs from server; early requests for statements return nothing
+
+Progress updates
+
+Every 30 minutes, 10% steps, never decreasing
+
+Missed update is flagged to judges, not blocked
+
+Final submission
+
+One submission per team, locked after confirm
+
+Only the host can unlock a submission, and the action is logged
+
+Judge approval
+
+Judge must provide a valid hackathon ID; host approves
+
+Wrong ID rejects the request; judge access ends when the hackathon is archived
+
+Result privacy
+
+Teams see only their own result
+
+API enforces this server-side, not by hiding UI
+
+Paused or deleted host
+
+Paused: no new registrations, existing event continues read-only. Deleted: soft delete, data retained 90 days
+
+Active hackathons of a deleted host require admin reassignment or refund flow
+
+Code storage
+
+Repo named by Team ID, created automatically
+
+Repo creation failure retries three times, then alerts admin and keeps the files in object storage
+
+5. Data model
+
+PostgreSQL, one table per entity. All tables carry id (UUID), created_at, updated_at.
+
+Table
+
+Key fields
+
+Relations
+
+users
+
+email, password_hash, role, status, name, phone
+
+one profile per role
+
+students
+
+user_id, hackathon_id (unique, HB-XXXXXX), college, profile fields
+
+belongs to user
+
+hosts
+
+user_id, org_name, type (college or company), approval_status, membership_status
+
+has many hackathons
+
+judges
+
+user_id, hackathon_id, approval_status
+
+belongs to hackathon
+
+hackathons
+
+host_id, title, description, rules, rules_gate, team_min, team_max, fee, payment_mode, status, start_at, end_at
+
+has many domains, teams
+
+domains
+
+hackathon_id, name, reveal_at
+
+has many problem_statements
+
+problem_statements
+
+domain_id, title, description, cap
+
+selected by teams
+
+teams
+
+team_id (unique), hackathon_id, lead_student_id, problem_statement_id, status
+
+has many team_members
+
+team_members
+
+team_id, student_id; unique on active student_id
+
+links students to a team
+
+payments
+
+team_id, mode, razorpay_order_id, razorpay_payment_id, txn_ref, screenshot_url, status, approved_by
+
+one per team
+
+progress_updates
+
+team_id, percent, note, created_at
+
+timeline per team
+
+code_repos
+
+team_id, github_repo_url, storage_path, last_push_at
+
+one per team
+
+submissions
+
+team_id (unique), link, file_url, description, submitted_at, locked
+
+one per team
+
+rubric_criteria
+
+hackathon_id, name, weight, max_score
+
+used by scores
+
+scores
+
+submission_id, judge_id, criterion_id, score, notes
+
+unique per judge and criterion
+
+results
+
+hackathon_id, team_id, rank, award, prize
+
+published by host
+
+site_content
+
+key, json_value, version, published
+
+CMS blocks edited by admin
+
+audit_logs
+
+actor_id, action, entity, entity_id, metadata
+
+all admin and host actions
+
+notifications
+
+user_id, type, payload, read_at
+
+in-app inbox
+
+Key constraints: unique active membership per student across hackathons; unique statement slot counts guarded by a transaction; submissions unique per team and immutable once locked; secrets (Razorpay keys, GitHub token) stored encrypted, never returned by the API.
+
+6. Architecture and tech stack
+
+A single Next.js application with a typed API layer, a PostgreSQL database and a background worker. The stack below is a recommendation; swap only with a reason.
+
+Layer
+
+Choice
+
+Why
+
+Frontend
+
+Next.js (App Router), TypeScript, Tailwind CSS
+
+SSR for SEO on public pages, one codebase
+
+3D and motion
+
+Three.js with React Three Fiber, GSAP or Framer Motion
+
+Matches the Stitch 3D design; lazy-loaded with a lightweight fallback
+
+Backend
+
+Next.js route handlers or NestJS, REST with Zod validation
+
+Typed, testable
+
+Database
+
+PostgreSQL with Prisma
+
+Transactions and unique constraints for slot and team rules
+
+Auth
+
+Auth.js or Clerk, role-based access control
+
+Email verification, Google login, sessions
+
+Realtime
+
+WebSockets or Server-Sent Events (Pusher or Supabase Realtime)
+
+Live slots, timers, progress
+
+Jobs and queue
+
+BullMQ with Redis
+
+Webhooks, GitHub pushes, reminders, emails
+
+Storage
+
+S3-compatible bucket
+
+Uploads, QR images, screenshots, exe files with virus scan
+
+Payments
+
+Razorpay Orders API plus signed webhooks
+
+Auto-verification
+
+Code storage
+
+GitHub REST API, one repo per Team ID
+
+Per requirement; fallback to bucket
+
+Email
+
+Resend or SES
+
+Transactional mail
+
+Hosting
+
+Vercel for the web app, managed Postgres and Redis
+
+Easy scaling and previews
+
+Observability
+
+Sentry, structured logs, uptime checks
+
+Production readiness
+
+Key flows
+
+Apply: lead submits team IDs, server validates in one transaction, creates a pending team, then payment starts.
+
+Razorpay: order created server-side, checkout on client, webhook verifies signature, team becomes active, Team ID generated.
+
+QR: team uploads proof, host approves, team becomes active, Team ID generated.
+
+Statement selection: client calls select, server locks the statement row, checks the cap, assigns, then broadcasts the new slot count.
+
+Code push: files land in storage, worker creates the repo named by Team ID and pushes a commit.
+
+API outline (REST, versioned under /api/v1)
+
+/auth: signup, login, verify, reset
+
+/students/me, /students/lookup/:hackathonId
+
+/hackathons (list, detail, create, update, publish), /hackathons/:id/domains, /problem-statements
+
+/teams (create, add-member, payment, select-statement), /teams/:id/progress, /teams/:id/code, /teams/:id/submission
+
+/payments/razorpay/order, /payments/razorpay/webhook, /payments/qr/proof, /payments/qr/:id/approve
+
+/judges (request, approve), /scores
+
+/admin (hosts, hackathons, users, site-content, settings, audit-logs)
+
+7. Non-functional requirements
+
+Area
+
+Requirement
+
+Security
+
+Role-based access checked on the server for every endpoint; passwords hashed with Argon2 or bcrypt; secrets encrypted at rest; CSRF and XSS protection; rate limits on login, ID lookup and statement selection; signed Razorpay webhooks only
+
+Data privacy
+
+Collect minimum student data; consent at signup; export and delete on request; follow India's DPDP Act requirements
+
+File safety
+
+Virus scan on uploads including .exe; size limits; files served from a separate domain; never executed on the server
+
+Performance
+
+p95 API under 300 ms; pages under 3 seconds on 4G; 3D scenes lazy-loaded, with a static fallback on low-end devices
+
+Scalability
+
+Handle 5,000 concurrent users during a problem-statement unlock; load-test this flow before launch
+
+Reliability
+
+99.5% uptime; daily database backups with restore tested; idempotent webhooks and retries
+
+Accessibility
+
+WCAG 2.1 AA; reduced-motion setting disables heavy animation
+
+Responsiveness
+
+Desktop first, fully usable on tablet and mobile
+
+Auditability
+
+Every admin and host action written to the audit log
+
+Testing
+
+Unit tests on rules (one hackathon per student, slot cap), integration tests on payment and allocation, end-to-end tests of the full student journey, load test on the unlock moment
+
+Deployment
+
+CI pipeline with lint, type check and tests; staging and production; database migrations versioned; environment secrets in a vault
+
+Legal pages
+
+Terms, privacy policy, refund policy, host agreement
+
+8. Phased roadmap
+
+Durations assume one full-stack builder working with an AI coding agent; scale them to your team.
+
+Phase 1, Foundation (weeks 1-2): project setup, design system from Stitch, auth, roles, Hackathon ID, database schema, CI. Gate: all four roles can sign up and log in.
+
+Phase 2, Host and listing (weeks 3-4): host approval, hackathon builder, domains and timers, public listing and detail pages, super admin host management. Gate: an approved host can publish a hackathon.
+
+Phase 3, Apply and pay (weeks 5-6): team formation, one-hackathon rule, Razorpay and QR flows, Team ID generation. Gate: a team can register and pay end to end.
+
+Phase 4, Event day (weeks 7-8): problem-statement reveal and balanced allocation, progress scale, code storage and GitHub push, submission lock. Gate: load test of the unlock passes.
+
+Phase 5, Judging and history (weeks 9-10): judge signup and approval, rubrics, scoring, results, student history, admin CMS. Gate: a full mock hackathon runs without manual fixes.
+
+Phase 6, Hardening and launch (weeks 11-12): security review, accessibility, performance, backups, legal pages, monitoring, pilot with one college. Gate: pilot hackathon completes and feedback is addressed.
+
+9. Build prompt for the coding agent
+
+Paste this into Antigravity (or any coding agent) after attaching this PRD and the Stitch designs. Build phase by phase and ask for tests at each gate.
+
+# ROLEYou are a senior full-stack engineer and architect. Build "HackBridge", a production-ready hackathon hosting platform, following the attached PRD exactly. Do not skip business rules, security or tests.# CONTEXTHackBridge connects students with colleges and companies. Roles: Student (team lead or member), Host (college or company), Judge, Super Admin. Core flows: Hackathon ID signup, team formation by the lead, Razorpay or QR payment, Team ID generation, timed problem-statement reveal with balanced first-come-first-served allocation, progress updates every 30 minutes, code storage pushed to GitHub per Team ID, one-time locked submission, judge scoring by host-defined rubric, results and student history, super admin CMS.# TECH STACKNext.js (App Router) + TypeScript + Tailwind, React Three Fiber and Framer Motion for 3D and animation, PostgreSQL + Prisma, Auth.js with RBAC, Redis + BullMQ, S3-compatible storage, Razorpay Orders API and webhooks, GitHub REST API, Resend for email, Zod for validation, Vitest and Playwright for tests, GitHub Actions CI.# DESIGNImplement the attached Stitch designs pixel-faithfully: dark theme, glassmorphism cards, 3D animated hero, consistent tokens in a single theme file. Respect prefers-reduced-motion and lazy-load 3D scenes with a static fallback.# NON-NEGOTIABLE RULES1. A student can belong to only one active hackathon registration. Enforce with a database unique constraint, not only UI checks.2. Only the team lead applies and adds teammates by Hackathon ID. After adding members, go directly to payment.3. Team ID is generated only after verified payment: Razorpay via signed webhook, QR via host approval.4. Problem statements are hidden server-side until the host-set reveal time (server clock). Cap per statement = ceil(teams / statements). Selection must be atomic using a transaction with row locking; the full statement locks instantly and updates all clients in real time.5. Host and judge accounts cannot act until approved. A judge must provide a valid hackathon ID and be approved by that host.6. Progress updates: 10% steps, timestamped, never decreasing, visible to judges and host only.7. Final submission is immutable once confirmed; only the host can unlock, and it is audit-logged.8. Teams see only their own results. Enforce on the server.9. Secrets (Razorpay keys, GitHub token) are encrypted at rest and never returned by any API.10. Every admin and host action is written to the audit log.# DELIVERABLES- Monorepo or single Next.js app with clean folder structure, README, .env.example, seed script with demo data for all four roles.- Prisma schema and migrations for all entities in the PRD data model.- All pages and API routes for FR-1 to FR-12 with input validation and error states, loading skeletons and empty states.- Background workers for webhooks, GitHub pushes, reminders and emails.- Tests: unit tests for allocation and one-hackathon rules, integration tests for payments, Playwright end-to-end of the full student journey, a load test of the unlock moment.- CI pipeline, Dockerfile, deployment guide for staging and production.# WORKING METHODWork in the six phases of the PRD roadmap. At the start of each phase list the files you will create, build it, run tests, and report what passed before moving on. Ask me only when a requirement is genuinely ambiguous; otherwise choose the safest option and note the assumption in docs/ASSUMPTIONS.md.# DEFINITION OF DONEAll gates in the PRD pass, no high-severity security findings, lint and type checks clean, Lighthouse performance 85 or higher on public pages, and a full mock hackathon runs end to end with no manual database edits.

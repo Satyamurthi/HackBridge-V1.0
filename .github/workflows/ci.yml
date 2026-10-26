@@ -1,0 +1,51 @@
+name: HackBridge Production CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    name: Lint, Typecheck, Test & Build
+    runs-on: ubuntu-latest
+
+    env:
+      DATABASE_URL: "file:./dev.db"
+      JWT_SECRET: "ci_jwt_secret_super_secure_32_chars_long_12345"
+      RAZORPAY_KEY_ID: "rzp_test_ci_id"
+      RAZORPAY_KEY_SECRET: "rzp_test_ci_secret"
+      GITHUB_TOKEN: "ghp_ci_stub_token"
+      GITHUB_ORG: "hackbridge-ci"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Push Database Schema
+        run: npx prisma db push
+
+      - name: Seed Initial State
+        run: npx tsx prisma/seed.ts
+
+      - name: Run TypeScript Verification
+        run: npx tsc --noEmit
+
+      - name: Run Vitest Test Suites
+        run: npx vitest run --fileParallelism=false
+
+      - name: Verify Next.js Production Build
+        run: npm run build
