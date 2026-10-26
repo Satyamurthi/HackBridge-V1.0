@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { generateTeamId } from "@/lib/id-generator";
 import { writeAuditLog } from "@/lib/audit";
+import { createNotification, createBulkNotifications } from "@/lib/notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +37,11 @@ export async function PATCH(
             hackathon: true,
             leadStudent: {
               include: { user: { select: { name: true, email: true } } },
+            },
+            members: {
+              include: {
+                student: true,
+              },
             },
           },
         },
@@ -90,6 +96,18 @@ export async function PATCH(
         leadEmail: payment.team.leadStudent.user.email,
       });
 
+      // Dispatch in-app notifications to all squad members
+      const memberUserIds = payment.team.members.map((m) => m.student.userId);
+      await createBulkNotifications(memberUserIds, "PAYMENT_VERIFIED", {
+        title: "Payment Verified & Squad Activated",
+        message: `Your payment for "${payment.team.hackathon.title}" has been verified! Official Team ID ${officialTeamId} issued.`,
+        link: "/dashboard/student",
+        metadata: {
+          teamId: officialTeamId,
+          hackathonTitle: payment.team.hackathon.title,
+        },
+      });
+
       return NextResponse.json({
         success: true,
         action: "APPROVE",
@@ -108,6 +126,17 @@ export async function PATCH(
         teamName: payment.team.name,
         hackathonTitle: payment.team.hackathon.title,
         txnRef: payment.txnRef,
+      });
+
+      // Dispatch rejection notification to team lead
+      await createNotification(payment.team.leadStudent.userId, "PAYMENT_REJECTED", {
+        title: "Payment Verification Rejected",
+        message: `Payment proof for team "${payment.team.name}" was rejected. Please review payment requirements or re-upload.`,
+        link: "/dashboard/student",
+        metadata: {
+          teamId: payment.teamId,
+          hackathonTitle: payment.team.hackathon.title,
+        },
       });
 
       return NextResponse.json({

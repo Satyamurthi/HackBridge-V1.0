@@ -58,3 +58,13 @@ Build and harden HackBridge, a high-assurance collegiate hackathon hosting and m
 - Public automated platform health check API at `/api/health` returning system uptime, database latency, and secret configuration statuses.
 - Automated database snapshot backup script (`scripts/backup-db.sh`) with retention policy.
 - Pilot Collegiate Runbook (`docs/PILOT_RUNBOOK.md`) detailing pre-flight checklists, host onboarding, and live day contingency operations.
+
+### [x] Task 8: Phase 8 — Notifications Inbox, DPDP Data Portability & Reminder Cron (FR-12 & Section 7 Compliance)
+- In-app Notification Dispatcher (`src/lib/notifications.ts`) supporting typed event payloads: `TEAM_INVITE`, `PAYMENT_VERIFIED`, `PAYMENT_REJECTED`, `SUBMISSION_LOCKED`, `SUBMISSION_UNLOCKED`, `RESULTS_PUBLISHED`, `PROGRESS_REMINDER`.
+- Notifications API (`/api/v1/notifications`) supporting unread counts, pagination, and mark-as-read / mark-all-read operations.
+- Interactive Notification Bell component (`src/components/notifications/NotificationBell.tsx`) integrated into Navbar with live unread badge, popover tray, and direct action routing.
+- DPDP Act Data Portability API (`/api/v1/users/export`) delivering complete data principal archives (profile, registrations, payments, submissions, audit logs).
+- Authenticated Student Context API (`/api/v1/students/me`) providing permanent `HB-XXXXXX` and active squad state.
+- Automated 30-Minute Progress Reminder Cron (`/api/v1/cron/reminders`) checking active hackathons and alerting overdue squads.
+- Comprehensive integration test suite: 5/5 passed (`tests/phase8-notifications-dpdp.test.ts`).
+

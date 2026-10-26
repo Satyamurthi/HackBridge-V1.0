@@ -49,4 +49,13 @@
 - Built automated health check API at /api/health responding in 2ms with database status, latency, memory usage, and secret verification.
 - Built automated database snapshot backup script scripts/backup-db.sh with gzip compression and 7-day retention pruning.
 - Created pilot collegiate operational runbook docs/PILOT_RUNBOOK.md covering T-14d to results certification.
-- All tasks in PRD.md verified and passing. Platform ready for pilot launch.
+
+## Iteration 8 — Phase 8: Notifications Inbox, DPDP Data Portability & Reminder Cron (COMPLETED)
+- Built in-app notification dispatcher lib/notifications.ts supporting TEAM_INVITE, PAYMENT_VERIFIED, PAYMENT_REJECTED, SUBMISSION_LOCKED, SUBMISSION_UNLOCKED, RESULTS_PUBLISHED, and PROGRESS_REMINDER.
+- Created Notifications API route at /api/v1/notifications supporting unread counting and mark-read operations.
+- Built interactive NotificationBell component with live unread badge, popover tray, and direct action routing matching Stitch design system. Integrated into main navigation Navbar.
+- Built DPDP Act Section 12 compliant personal data portability download API at /api/v1/users/export and student profile view at /dashboard/student/profile.
+- Built automated 30-minute progress update scan cron at /api/v1/cron/reminders.
+- Wired live notifications to QR payment approval, team creation, submission locking/unlocking, and results publishing.
+- Test suites: 49/49 Vitest tests passed (8 suites), 4/4 Playwright browser E2E tests passed. Next.js production build: 28 static pages, 38 API routes compiled with 0 errors.
+

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
+import { createBulkNotifications } from "@/lib/notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -77,6 +78,33 @@ export async function POST(
       hackathonTitle: hackathon.title,
       winnersCount: savedResults.length,
     });
+
+    // Notify participating team members of their certified result
+    for (const item of results) {
+      try {
+        const team = await prisma.team.findFirst({
+          where: { OR: [{ id: item.teamId }, { teamId: item.teamId }] },
+          include: { members: { include: { student: true } } },
+        });
+        if (team && team.members.length > 0) {
+          const userIds = team.members.map((m) => m.student.userId);
+          const awardName = item.award || `Rank #${item.rank}`;
+          await createBulkNotifications(userIds, "RESULTS_PUBLISHED", {
+            title: `Results Certified: ${awardName}`,
+            message: `Congratulations! Team "${team.name}" was awarded "${awardName}" in "${hackathon.title}".`,
+            link: "/dashboard/student/history",
+            metadata: {
+              hackathonId: hackathon.id,
+              teamId: team.id,
+              award: awardName,
+              rank: item.rank,
+            },
+          });
+        }
+      } catch (err) {
+        console.error("[Results Notification Error]:", err);
+      }
+    }
 
     return NextResponse.json({
       success: true,

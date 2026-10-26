@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
+import { createBulkNotifications } from "@/lib/notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,7 @@ export async function PATCH(
           include: {
             hackathon: true,
             leadStudent: { include: { user: true } },
+            members: { include: { student: true } },
           },
         },
       },
@@ -76,6 +78,19 @@ export async function PATCH(
       teamId: submission.team.teamId,
       hackathonTitle: submission.team.hackathon.title,
       unlockReason: unlockReason.trim(),
+    });
+
+    // Notify all squad members
+    const memberUserIds = submission.team.members.map((m) => m.student.userId);
+    await createBulkNotifications(memberUserIds, "SUBMISSION_UNLOCKED", {
+      title: "Project Submission Unlocked",
+      message: `Your project submission for "${submission.team.hackathon.title}" was unlocked by host. Reason: ${unlockReason.trim()}`,
+      link: `/dashboard/student/arena?teamId=${submission.team.id}`,
+      metadata: {
+        teamId: submission.team.id,
+        hackathonId: submission.team.hackathon.id,
+        reason: unlockReason.trim(),
+      },
     });
 
     return NextResponse.json({

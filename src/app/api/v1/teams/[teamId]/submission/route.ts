@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
+import { createBulkNotifications } from "@/lib/notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -77,6 +78,7 @@ export async function POST(
         leadStudent: true,
         submission: true,
         hackathon: true,
+        members: { include: { student: true } },
       },
     });
 
@@ -135,6 +137,15 @@ export async function POST(
       teamId: team.teamId,
       hackathonTitle: team.hackathon.title,
       link: link?.trim() || null,
+    });
+
+    // Notify all squad members
+    const memberUserIds = team.members.map((m) => m.student.userId);
+    await createBulkNotifications(memberUserIds, "SUBMISSION_LOCKED", {
+      title: "Project Submission Locked",
+      message: `Final project submission for "${team.hackathon.title}" has been permanently locked for evaluation.`,
+      link: `/dashboard/student/arena?teamId=${team.id}`,
+      metadata: { teamId: team.id, hackathonId: team.hackathon.id },
     });
 
     return NextResponse.json({

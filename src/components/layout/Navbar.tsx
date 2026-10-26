@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Shield
 } from "lucide-react";
+import NotificationBell from "@/components/notifications/NotificationBell";
 
 interface UserSession {
   userId: string;
@@ -168,6 +169,9 @@ export default function Navbar() {
               <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-white/[0.04] border border-white/10 text-slate-400">
                 {session.role}
               </span>
+
+              {/* In-App Notifications Tray */}
+              <NotificationBell />
 
               {/* Dashboard Link */}
               <Link

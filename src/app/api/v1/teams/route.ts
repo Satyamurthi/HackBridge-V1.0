@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { generateTeamId } from "@/lib/id-generator";
 import { writeAuditLog } from "@/lib/audit";
+import { createBulkNotifications } from "@/lib/notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -218,7 +219,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Look up and validate all teammates
-    const validatedTeammates: Array<{ id: string; name: string; hackathonId: string }> = [];
+    const validatedTeammates: Array<{ id: string; userId: string; name: string; hackathonId: string }> = [];
 
     for (const hId of cleanTeammateIds) {
       const teammateStudent = await prisma.studentProfile.findUnique({
@@ -260,6 +261,7 @@ export async function POST(req: NextRequest) {
 
       validatedTeammates.push({
         id: teammateStudent.id,
+        userId: teammateStudent.userId,
         name: teammateStudent.user.name,
         hackathonId: teammateStudent.hackathonId,
       });
@@ -323,6 +325,24 @@ export async function POST(req: NextRequest) {
       isFree,
       teamId: initialTeamId,
     });
+
+    // Dispatch in-app notifications to invited teammates
+    if (validatedTeammates.length > 0) {
+      await createBulkNotifications(
+        validatedTeammates.map((t) => t.userId),
+        "TEAM_INVITE",
+        {
+          title: "Added to Hackathon Squad",
+          message: `You were added to squad "${createdTeam.name}" for "${hackathon.title}" by ${leadStudent.user.name}.`,
+          link: "/dashboard/student",
+          metadata: {
+            teamId: createdTeam.id,
+            hackathonId: hackathon.id,
+            teamName: createdTeam.name,
+          },
+        }
+      );
+    }
 
     return NextResponse.json(
       {
