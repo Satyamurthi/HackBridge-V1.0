@@ -177,7 +177,7 @@ export async function POST(req: NextRequest) {
               domainId: d.id,
               title: ps.title,
               description: ps.description || "",
-              cap: 0,
+              cap: ps.cap ? Number(ps.cap) : 0,
             },
           });
         }
