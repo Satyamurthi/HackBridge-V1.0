@@ -82,3 +82,42 @@
   - **7 test suites passed (7/7)**.
   - **44 tests passed (44/44)** with 100% pass rate.
 - [x] **Gate Passed**: Platform fully hardened, verified, and ready for deployment.
+
+---
+
+### Phase 7: Production Ops, Backup Automation & Pilot Runbook (COMPLETED ✅)
+- [x] Production Health Check endpoint (`/api/v1/health`) checking database query latency, storage quotas, and node runtime.
+- [x] Automated SQLite and PostgreSQL hot backup script (`scripts/backup-db.sh`) with retention policies and SHA-256 verification.
+- [x] Complete collegiate pilot launch runbook (`docs/PILOT_RUNBOOK.md`) detailing pre-flight checklists, emergency overrides, and host triage procedures.
+- [x] **Gate Passed**: Ops infrastructure ready for collegiate production traffic.
+
+---
+
+### Phase 8: In-App Notifications, DPDP Data Portability & Reminder Cron (COMPLETED ✅)
+- [x] In-app notification dispatcher (`src/lib/notifications.ts`) supporting 7 PRD event types (`TEAM_INVITE`, `PAYMENT_VERIFIED`, `PAYMENT_REJECTED`, `SUBMISSION_LOCKED`, `SUBMISSION_UNLOCKED`, `RESULTS_PUBLISHED`, `PROGRESS_REMINDER`).
+- [x] In-app notification bell component (`src/components/notifications/NotificationBell.tsx`) integrated into global navigation.
+- [x] Notifications API (`/api/v1/notifications`) with real-time polling, unread counts, and read states.
+- [x] India DPDP Act 2023 Section 12 compliant personal data portability download API (`/api/v1/users/export`) and student profile portal (`/dashboard/student/profile`).
+- [x] Automated 30-minute progress milestone reminder cron (`/api/v1/cron/reminders`).
+- [x] Automated test suite: 5/5 Vitest tests passed (`tests/phase8-notifications-dpdp.test.ts`).
+- [x] Total Platform Vitest status: **49/49 tests passed** across 8 test suites.
+- [x] **Gate Passed**: Complete student and host notification flow, DPDP compliance, and cron reminders active.
+
+---
+
+### Hero Three.js WebGL 2 Rotating Dotted Globe & Browser Verification (COMPLETED ✅)
+- [x] **Three.js WebGL 2 Canvas Engine** (`src/components/hero/Hero3D.tsx`):
+  - 4,200 Fibonacci sphere points with latitude-based indigo gradient coloring (`#6366F1` to `#A5B4FC`).
+  - Programmatic in-memory 64x64 soft circular radial gradient alpha particle texture eliminating square pixel artifacts.
+  - 8 collegiate tech city hubs with elevated quadratic bezier connection arcs and traveling energy pulses.
+  - Dark inner core sphere (`#030407`, 0.96 opacity) providing solid 3D depth.
+  - 1,400-point background starfield with counter-drift.
+  - Performance optimizations: capped `devicePixelRatio` (min(dpr, 2)), reduced point count on mobile (`< 768px`), `IntersectionObserver` pause when offscreen, full geometry/material/texture disposal on unmount, and graceful CSS dotted fallback for `prefers-reduced-motion` or missing WebGL 2.
+- [x] **Automated Browser Verification** (`scripts/verify-hero.ts`):
+  - Headless Chromium launched at 1440x900 (deviceScaleFactor: 2).
+  - Canvas element verified in DOM (`{ x: 0, y: 61, width: 1440, height: 828 }`).
+  - Internal render resolution verified at 2880x1656 px.
+  - Live rotation verified: Frame 1 and Frame 2 image buffers differ (`isDifferent: true`, `elapsed * 0.07`).
+  - Browser console verified: **0 console errors**, **0 runtime errors**.
+  - High-resolution captures saved to `hero_globe_frame1.png` and `hero_globe_frame2.png`.
+- [x] **Gate Passed**: Three.js dotted globe verified visually and functionally in real browser session with zero console errors.
