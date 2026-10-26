@@ -1,34 +1,33 @@
 // Stitch Design System Tokens for HackBridge
+// Strictly aligned to one accent (#6366F1), neutral dark obsidian (#030407), and subtle 1px borders
 
 export const TOKENS = {
   colors: {
-    background: "#0a0b10",
-    surface: "#12141f",
-    surfaceElevated: "#1a1d2e",
-    borderDark: "rgba(255, 255, 255, 0.08)",
-    borderGlow: "rgba(0, 243, 255, 0.3)",
+    background: "#030407",
+    surface: "#0b0e18",
+    surfaceElevated: "#111524",
+    borderSubtle: "rgba(255, 255, 255, 0.08)",
+    accent: {
+      indigo: "#6366f1",
+      indigoHover: "#4f46e5",
+      indigoSubtle: "rgba(99, 102, 241, 0.12)",
+    },
     text: {
       primary: "#f8fafc",
       secondary: "#94a3b8",
       muted: "#64748b",
-      inverse: "#0a0b10",
-    },
-    cyber: {
-      cyan: "#00f3ff",
-      pink: "#ff007a",
-      purple: "#7928ca",
-      amber: "#f59e0b",
-      emerald: "#10b981",
+      inverse: "#030407",
     },
   },
   glass: {
-    background: "rgba(18, 20, 31, 0.75)",
-    backdropFilter: "blur(24px)",
+    background: "rgba(11, 14, 24, 0.82)",
+    backdropFilter: "blur(28px)",
     border: "1px solid rgba(255, 255, 255, 0.08)",
-    boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.37)",
+    boxShadow: "0 24px 60px rgba(0, 0, 0, 0.65)",
   },
   typography: {
-    fontSans: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    fontDisplay: '"Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    fontBody: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
     fontMono: '"JetBrains Mono", "Fira Code", monospace',
   },
 };

@@ -3,13 +3,47 @@
 import React, { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 
+// Collegiate & Tech Hubs (Lat, Lon) on the Globe
+const CITY_HUBS = [
+  { name: "SF / Stanford", lat: 37.4275, lon: -122.1697 },
+  { name: "Boston / MIT", lat: 42.3601, lon: -71.0942 },
+  { name: "London / Oxford", lat: 51.752, lon: -1.2577 },
+  { name: "Zurich / ETH", lat: 47.3763, lon: 8.548 },
+  { name: "Bengaluru / IISc", lat: 12.9716, lon: 77.5946 },
+  { name: "Tokyo / Todai", lat: 35.7128, lon: 139.762 },
+  { name: "Singapore / NUS", lat: 1.2966, lon: 103.7764 },
+  { name: "Sydney", lat: -33.8688, lon: 151.2093 },
+];
+
+// Connection pairs between cities (Indices into CITY_HUBS)
+const CONNECTIONS = [
+  [0, 1], // SF <-> Boston
+  [1, 2], // Boston <-> London
+  [2, 3], // London <-> Zurich
+  [2, 4], // London <-> Bengaluru
+  [4, 6], // Bengaluru <-> Singapore
+  [0, 5], // SF <-> Tokyo
+  [5, 6], // Tokyo <-> Singapore
+  [6, 7], // Singapore <-> Sydney
+];
+
+// Convert spherical Lat/Lon to 3D Cartesian coordinates
+function latLonToVector3(lat: number, lon: number, radius: number): THREE.Vector3 {
+  const phi = (90 - lat) * (Math.PI / 180);
+  const theta = (lon + 180) * (Math.PI / 180);
+  const x = -radius * Math.sin(phi) * Math.cos(theta);
+  const z = radius * Math.sin(phi) * Math.sin(theta);
+  const y = radius * Math.cos(phi);
+  return new THREE.Vector3(x, y, z);
+}
+
 export default function Hero3D() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [hasWebGL, setHasWebGL] = useState(true);
   const [reducedMotion, setReducedMotion] = useState(false);
 
   useEffect(() => {
-    // Check prefers-reduced-motion
+    // 1. Accessibility: Check prefers-reduced-motion
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       setReducedMotion(true);
       return;
@@ -18,7 +52,7 @@ export default function Hero3D() {
     const container = containerRef.current;
     if (!container) return;
 
-    // Detect WebGL capability
+    // 2. Detect WebGL capability
     try {
       const testCanvas = document.createElement("canvas");
       const gl = testCanvas.getContext("webgl") || testCanvas.getContext("experimental-webgl");
@@ -31,111 +65,209 @@ export default function Hero3D() {
       return;
     }
 
-    // --- Three.js Scene Setup ---
+    // ─── Scene & Camera Setup ──────────────────────────────────────────
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x030407, 0.015);
+    scene.fog = new THREE.FogExp2(0x030407, 0.012);
 
     const camera = new THREE.PerspectiveCamera(
-      55,
+      48,
       container.clientWidth / container.clientHeight,
       0.1,
       1000
     );
-    camera.position.set(0, 0, 48);
+    camera.position.set(0, 0, 44);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: true,
+      powerPreference: "high-performance",
+    });
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.0;
     container.appendChild(renderer.domElement);
 
-    // --- 1. Background Wireframe Geodesic Globe ---
-    const globeRadius = 18;
-    const globeGeo = new THREE.IcosahedronGeometry(globeRadius, 2);
-    const globeMat = new THREE.MeshBasicMaterial({
-      color: 0x6366f1,
-      wireframe: true,
-      transparent: true,
-      opacity: 0.08,
-    });
-    const globeMesh = new THREE.Mesh(globeGeo, globeMat);
-    globeMesh.position.set(16, -2, -10);
-    scene.add(globeMesh);
+    // Group holding the globe and its surface features
+    const globeGroup = new THREE.Group();
+    // Offset slightly right on desktop to frame left-aligned typography
+    const isMobile = container.clientWidth < 768;
+    globeGroup.position.set(isMobile ? 0 : 12, isMobile ? -3 : 0, -2);
+    scene.add(globeGroup);
 
-    // --- 2. Interactive Rotating Particle Network ---
-    const particleCount = 90;
-    const maxDistance = 9.5;
-    const bounds = { x: 38, y: 24, z: 22 };
+    const GLOBE_RADIUS = 18;
 
-    const positions = new Float32Array(particleCount * 3);
-    const velocities: THREE.Vector3[] = [];
+    // ─── 1. Dotted Globe (Thousands of Points via Fibonacci Sphere) ───
+    const dotCount = isMobile ? 1800 : 3800;
+    const dotPositions = new Float32Array(dotCount * 3);
+    const dotColors = new Float32Array(dotCount * 3);
 
-    for (let i = 0; i < particleCount; i++) {
-      positions[i * 3] = (Math.random() - 0.5) * bounds.x * 2;
-      positions[i * 3 + 1] = (Math.random() - 0.5) * bounds.y * 2;
-      positions[i * 3 + 2] = (Math.random() - 0.5) * bounds.z * 2;
+    const accentColor = new THREE.Color(0x6366f1); // Indigo accent
+    const faintColor = new THREE.Color(0x2d3258);  // Faint backface shade
 
-      velocities.push(
-        new THREE.Vector3(
-          (Math.random() - 0.5) * 0.02,
-          (Math.random() - 0.5) * 0.02,
-          (Math.random() - 0.5) * 0.015
-        )
-      );
+    for (let i = 0; i < dotCount; i++) {
+      // Fibonacci sphere distribution
+      const phi = Math.acos(1 - (2 * (i + 0.5)) / dotCount);
+      const theta = Math.PI * (1 + Math.sqrt(5)) * i;
+
+      const x = GLOBE_RADIUS * Math.sin(phi) * Math.cos(theta);
+      const y = GLOBE_RADIUS * Math.cos(phi);
+      const z = GLOBE_RADIUS * Math.sin(phi) * Math.sin(theta);
+
+      dotPositions[i * 3] = x;
+      dotPositions[i * 3 + 1] = y;
+      dotPositions[i * 3 + 2] = z;
+
+      // Subtle brightness variation based on latitude
+      const latRatio = Math.abs(y / GLOBE_RADIUS);
+      const mixRatio = Math.sin(latRatio * Math.PI) * 0.7 + 0.3;
+      const c = faintColor.clone().lerp(accentColor, mixRatio);
+
+      dotColors[i * 3] = c.r;
+      dotColors[i * 3 + 1] = c.g;
+      dotColors[i * 3 + 2] = c.b;
     }
 
-    const particleGeo = new THREE.BufferGeometry();
-    particleGeo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    const dotGeo = new THREE.BufferGeometry();
+    dotGeo.setAttribute("position", new THREE.BufferAttribute(dotPositions, 3));
+    dotGeo.setAttribute("color", new THREE.BufferAttribute(dotColors, 3));
 
-    const particleMat = new THREE.PointsMaterial({
-      color: 0xffffff,
-      size: 0.22,
-      transparent: true,
-      opacity: 0.7,
-    });
-
-    const particles = new THREE.Points(particleGeo, particleMat);
-    scene.add(particles);
-
-    // Dynamic Connection Lines
-    const maxLineSegments = particleCount * particleCount;
-    const linePositions = new Float32Array(maxLineSegments * 6);
-    const lineColors = new Float32Array(maxLineSegments * 6);
-
-    const lineGeo = new THREE.BufferGeometry();
-    lineGeo.setAttribute("position", new THREE.BufferAttribute(linePositions, 3));
-    lineGeo.setAttribute("color", new THREE.BufferAttribute(lineColors, 3));
-
-    const lineMat = new THREE.LineBasicMaterial({
+    const dotMat = new THREE.PointsMaterial({
+      size: isMobile ? 0.28 : 0.34,
       vertexColors: true,
       transparent: true,
-      opacity: 0.35,
+      opacity: 0.85,
       blending: THREE.NormalBlending,
     });
 
-    const linesMesh = new THREE.LineSegments(lineGeo, lineMat);
-    scene.add(linesMesh);
+    const globeDots = new THREE.Points(dotGeo, dotMat);
+    globeGroup.add(globeDots);
 
-    // --- 3. Mouse Parallax Reaction ---
+    // Subtle dark inner core sphere to mask backface dots
+    const coreGeo = new THREE.SphereGeometry(GLOBE_RADIUS * 0.985, 32, 32);
+    const coreMat = new THREE.MeshBasicMaterial({
+      color: 0x04060c,
+      transparent: true,
+      opacity: 0.94,
+    });
+    const coreMesh = new THREE.Mesh(coreGeo, coreMat);
+    globeGroup.add(coreMesh);
+
+    // ─── 2. City Hub Markers on Globe ─────────────────────────────────
+    const cityPositions: THREE.Vector3[] = [];
+    const cityDotPositions = new Float32Array(CITY_HUBS.length * 3);
+
+    CITY_HUBS.forEach((city, idx) => {
+      const v = latLonToVector3(city.lat, city.lon, GLOBE_RADIUS * 1.01);
+      cityPositions.push(v);
+      cityDotPositions[idx * 3] = v.x;
+      cityDotPositions[idx * 3 + 1] = v.y;
+      cityDotPositions[idx * 3 + 2] = v.z;
+    });
+
+    const cityGeo = new THREE.BufferGeometry();
+    cityGeo.setAttribute("position", new THREE.BufferAttribute(cityDotPositions, 3));
+
+    const cityMat = new THREE.PointsMaterial({
+      color: 0xa5b4fc, // Bright crisp indigo highlight
+      size: 0.85,
+      transparent: true,
+      opacity: 1.0,
+    });
+
+    const cityPoints = new THREE.Points(cityGeo, cityMat);
+    globeGroup.add(cityPoints);
+
+    // ─── 3. Elevated Glowing Connection Arcs between Cities ────────────
+    const arcCurves: THREE.QuadraticBezierCurve3[] = [];
+    const arcLinesGroup = new THREE.Group();
+    globeGroup.add(arcLinesGroup);
+
+    CONNECTIONS.forEach(([fromIdx, toIdx]) => {
+      const p1 = cityPositions[fromIdx];
+      const p2 = cityPositions[toIdx];
+
+      // Calculate elevated arc midpoint
+      const mid = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
+      const dist = p1.distanceTo(p2);
+      // Elevate above the globe proportional to distance
+      const elevation = GLOBE_RADIUS + dist * 0.35;
+      mid.normalize().multiplyScalar(elevation);
+
+      const curve = new THREE.QuadraticBezierCurve3(p1, mid, p2);
+      arcCurves.push(curve);
+
+      // Static faint underlying arc
+      const points = curve.getPoints(45);
+      const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
+      const lineMat = new THREE.LineBasicMaterial({
+        color: 0x6366f1,
+        transparent: true,
+        opacity: 0.32,
+      });
+      const line = new THREE.Line(lineGeo, lineMat);
+      arcLinesGroup.add(line);
+    });
+
+    // Animated traveling energy pulses along arcs
+    const pulseCount = arcCurves.length;
+    const pulsePositions = new Float32Array(pulseCount * 3);
+    const pulseGeo = new THREE.BufferGeometry();
+    pulseGeo.setAttribute("position", new THREE.BufferAttribute(pulsePositions, 3));
+
+    const pulseMat = new THREE.PointsMaterial({
+      color: 0xffffff,
+      size: 0.75,
+      transparent: true,
+      opacity: 0.95,
+      blending: THREE.AdditiveBlending,
+    });
+    const pulsePoints = new THREE.Points(pulseGeo, pulseMat);
+    globeGroup.add(pulsePoints);
+
+    // ─── 4. Faint Background Starfield ─────────────────────────────────
+    const starCount = 1200;
+    const starPositions = new Float32Array(starCount * 3);
+    for (let i = 0; i < starCount; i++) {
+      const r = 90 + Math.random() * 140;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(Math.random() * 2 - 1);
+      starPositions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+      starPositions[i * 3 + 1] = r * Math.cos(phi);
+      starPositions[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
+    }
+    const starGeo = new THREE.BufferGeometry();
+    starGeo.setAttribute("position", new THREE.BufferAttribute(starPositions, 3));
+    const starMat = new THREE.PointsMaterial({
+      color: 0x818cf8,
+      size: 0.22,
+      transparent: true,
+      opacity: 0.35,
+    });
+    const stars = new THREE.Points(starGeo, starMat);
+    scene.add(stars);
+
+    // ─── 5. Mouse Parallax Reaction ────────────────────────────────────
     let targetX = 0;
     let targetY = 0;
     const handleMouseMove = (e: MouseEvent) => {
-      targetX = (e.clientX / window.innerWidth - 0.5) * 4;
-      targetY = (e.clientY / window.innerHeight - 0.5) * 3;
+      targetX = (e.clientX / window.innerWidth - 0.5) * 3.5;
+      targetY = (e.clientY / window.innerHeight - 0.5) * 2.5;
     };
     window.addEventListener("mousemove", handleMouseMove, { passive: true });
 
-    // --- 4. Responsive Resize ---
+    // ─── 6. Responsive Resize ──────────────────────────────────────────
     const handleResize = () => {
       if (!container) return;
       camera.aspect = container.clientWidth / container.clientHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(container.clientWidth, container.clientHeight);
+
+      // Reposition globe group dynamically on mobile/desktop
+      const mobile = container.clientWidth < 768;
+      globeGroup.position.set(mobile ? 0 : 12, mobile ? -3 : 0, -2);
     };
     window.addEventListener("resize", handleResize);
 
-    // --- 5. IntersectionObserver: Pause rendering when off screen ---
+    // ─── 7. Visibility Pause via IntersectionObserver ──────────────────
     let isVisible = true;
     const observer = new IntersectionObserver(
       (entries) => {
@@ -147,92 +279,42 @@ export default function Hero3D() {
     );
     observer.observe(container);
 
-    // --- 6. Animation Loop ---
+    // ─── 8. Animation Loop ─────────────────────────────────────────────
     let animationFrameId: number;
-    let clock = new THREE.Clock();
+    const clock = new THREE.Clock();
 
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
 
-      // If off screen, pause updates to preserve CPU/GPU
+      // Pause rendering if scrolled off screen
       if (!isVisible) return;
 
       const elapsed = clock.getElapsedTime();
 
-      // Rotate background globe
-      globeMesh.rotation.y = elapsed * 0.06;
-      globeMesh.rotation.x = elapsed * 0.03;
+      // Slow majestic rotation of the dotted globe and cities
+      globeGroup.rotation.y = elapsed * 0.06;
+      globeGroup.rotation.x = Math.sin(elapsed * 0.03) * 0.08;
 
-      // Update particle positions & wrap around bounds
-      const posAttr = particleGeo.attributes.position as THREE.BufferAttribute;
-      const posArray = posAttr.array as Float32Array;
+      // Animate energy pulses traveling across arcs
+      const pulsePosAttr = pulseGeo.attributes.position as THREE.BufferAttribute;
+      const pulseArray = pulsePosAttr.array as Float32Array;
 
-      for (let i = 0; i < particleCount; i++) {
-        const vel = velocities[i];
-        posArray[i * 3] += vel.x;
-        posArray[i * 3 + 1] += vel.y;
-        posArray[i * 3 + 2] += vel.z;
+      arcCurves.forEach((curve, i) => {
+        // Offset speed per arc
+        const progress = ((elapsed * 0.25 + i * 0.14) % 1);
+        const pt = curve.getPoint(progress);
+        pulseArray[i * 3] = pt.x;
+        pulseArray[i * 3 + 1] = pt.y;
+        pulseArray[i * 3 + 2] = pt.z;
+      });
+      pulsePosAttr.needsUpdate = true;
 
-        // Boundary wrap
-        if (Math.abs(posArray[i * 3]) > bounds.x) vel.x = -vel.x;
-        if (Math.abs(posArray[i * 3 + 1]) > bounds.y) vel.y = -vel.y;
-        if (Math.abs(posArray[i * 3 + 2]) > bounds.z) vel.z = -vel.z;
-      }
-      posAttr.needsUpdate = true;
+      // Slow background stars rotation opposite to globe
+      stars.rotation.y = -elapsed * 0.008;
 
-      // Update connecting line segments between near particles
-      let lineVertexIndex = 0;
-      let colorVertexIndex = 0;
-
-      for (let i = 0; i < particleCount; i++) {
-        const x1 = posArray[i * 3];
-        const y1 = posArray[i * 3 + 1];
-        const z1 = posArray[i * 3 + 2];
-
-        for (let j = i + 1; j < particleCount; j++) {
-          const x2 = posArray[j * 3];
-          const y2 = posArray[j * 3 + 1];
-          const z2 = posArray[j * 3 + 2];
-
-          const dx = x1 - x2;
-          const dy = y1 - y2;
-          const dz = z1 - z2;
-          const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
-
-          if (dist < maxDistance) {
-            const alpha = 1.0 - dist / maxDistance;
-
-            linePositions[lineVertexIndex++] = x1;
-            linePositions[lineVertexIndex++] = y1;
-            linePositions[lineVertexIndex++] = z1;
-
-            linePositions[lineVertexIndex++] = x2;
-            linePositions[lineVertexIndex++] = y2;
-            linePositions[lineVertexIndex++] = z2;
-
-            // Indigo tint (#6366F1 = 0.388, 0.400, 0.945)
-            const r = 0.39 * alpha;
-            const g = 0.40 * alpha;
-            const b = 0.95 * alpha;
-
-            lineColors[colorVertexIndex++] = r;
-            lineColors[colorVertexIndex++] = g;
-            lineColors[colorVertexIndex++] = b;
-
-            lineColors[colorVertexIndex++] = r;
-            lineColors[colorVertexIndex++] = g;
-            lineColors[colorVertexIndex++] = b;
-          }
-        }
-      }
-
-      lineGeo.setDrawRange(0, lineVertexIndex / 3);
-      (lineGeo.attributes.position as THREE.BufferAttribute).needsUpdate = true;
-      (lineGeo.attributes.color as THREE.BufferAttribute).needsUpdate = true;
-
-      // Smooth camera parallax following mouse
-      camera.position.x += (targetX - camera.position.x) * 0.04;
-      camera.position.y += (-targetY - camera.position.y) * 0.04;
+      // Smooth camera drift + gentle mouse parallax
+      camera.position.x += (targetX + Math.sin(elapsed * 0.15) * 0.8 - camera.position.x) * 0.035;
+      camera.position.y += (-targetY + Math.cos(elapsed * 0.12) * 0.5 - camera.position.y) * 0.035;
       camera.lookAt(0, 0, 0);
 
       renderer.render(scene, camera);
@@ -249,23 +331,34 @@ export default function Hero3D() {
         container.removeChild(renderer.domElement);
       }
       renderer.dispose();
-      globeGeo.dispose();
-      globeMat.dispose();
-      particleGeo.dispose();
-      particleMat.dispose();
-      lineGeo.dispose();
-      lineMat.dispose();
+      dotGeo.dispose();
+      dotMat.dispose();
+      coreGeo.dispose();
+      coreMat.dispose();
+      cityGeo.dispose();
+      cityMat.dispose();
+      pulseGeo.dispose();
+      pulseMat.dispose();
+      starGeo.dispose();
+      starMat.dispose();
     };
   }, []);
 
   if (reducedMotion || !hasWebGL) {
-    // Static Poster Fallback for Reduced-Motion & Non-WebGL
+    // Static CSS Gradient with Dotted Radial Grid Pattern Fallback
     return (
       <div
-        className="absolute inset-0 z-0 bg-gradient-to-tr from-[#030407] via-[#0b0e18] to-[#030407] pointer-events-none"
+        className="absolute inset-0 z-0 bg-gradient-to-tr from-[#030407] via-[#080b15] to-[#030407] pointer-events-none"
         aria-hidden="true"
       >
-        <div className="absolute right-10 top-1/4 w-80 h-80 rounded-full border border-indigo-500/10 bg-indigo-500/5 blur-3xl opacity-30" />
+        <div
+          className="absolute inset-0 opacity-20"
+          style={{
+            backgroundImage: "radial-gradient(#6366f1 1px, transparent 1px)",
+            backgroundSize: "28px 28px",
+          }}
+        />
+        <div className="absolute right-12 top-1/4 w-96 h-96 rounded-full border border-indigo-500/15 bg-indigo-500/5 blur-2xl opacity-40" />
       </div>
     );
   }
