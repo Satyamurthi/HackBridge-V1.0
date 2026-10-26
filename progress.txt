@@ -59,3 +59,11 @@
 - Wired live notifications to QR payment approval, team creation, submission locking/unlocking, and results publishing.
 - Test suites: 49/49 Vitest tests passed (8 suites), 4/4 Playwright browser E2E tests passed. Next.js production build: 28 static pages, 38 API routes compiled with 0 errors.
 
+## Iteration 9 — Quality Audit, Code Review & Hardening (COMPLETED)
+- Conducted CodeRabbit CLI and manual security/quality audit across all 38 API routes and 28 pages.
+- Corrected notification routing targets from query parameter format `/dashboard/student/arena?teamId=` to dynamic route format `/dashboard/student/arena/${teamId}` across unlock, submission, and reminder cron routes.
+- Created defensive query fallback redirect at `src/app/dashboard/student/arena/page.tsx`.
+- Configured ESLint with `next/core-web-vitals` (`.eslintrc.json`) and verified zero warnings / zero errors.
+- Enhanced `playwright.config.ts` with automated `webServer` lifecycle management.
+- Normalized test lifecycle hooks in `tests/phase5-judging-history.test.ts`.
+- Verification passed: 49/49 Vitest tests (8 suites), 4/4 Playwright E2E tests, TypeScript typecheck (0 errors), Next.js production build (28 static, 38 dynamic routes).
