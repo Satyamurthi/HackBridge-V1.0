@@ -163,36 +163,6 @@ describe("Phase 5: Judging, Host Approval, Rubrics, Weighted Scoring, and Result
     });
   });
 
-  afterAll(async () => {
-    // Clean up
-    for (const t of [teamA, teamB]) {
-      if (t?.id) {
-        await prisma.result.deleteMany({ where: { teamId: t.id } }).catch(() => {});
-        await prisma.score.deleteMany({ where: { submission: { teamId: t.id } } }).catch(() => {});
-        await prisma.submission.deleteMany({ where: { teamId: t.id } }).catch(() => {});
-        await prisma.teamMember.deleteMany({ where: { teamId: t.id } }).catch(() => {});
-        await prisma.team.delete({ where: { id: t.id } }).catch(() => {});
-      }
-    }
-
-    if (judgeUser?.id) {
-      await prisma.judgeProfile.deleteMany({ where: { userId: judgeUser.id } }).catch(() => {});
-      await prisma.user.delete({ where: { id: judgeUser.id } }).catch(() => {});
-    }
-
-    for (const u of [studentUserA, studentUserB]) {
-      if (u?.id) {
-        await prisma.studentProfile.deleteMany({ where: { userId: u.id } }).catch(() => {});
-        await prisma.user.delete({ where: { id: u.id } }).catch(() => {});
-      }
-    }
-
-    if (testHackathon?.id) {
-      await prisma.rubricCriterion.deleteMany({ where: { hackathonId: testHackathon.id } }).catch(() => {});
-      await prisma.hackathon.delete({ where: { id: testHackathon.id } }).catch(() => {});
-    }
-  });
-
   it("should enforce PRD Rule 5: Judge cannot act until host approves profile", async () => {
     const judgeProfile = await prisma.judgeProfile.findFirst({
       where: { userId: judgeUser.id, hackathonId: testHackathon.id },
@@ -344,5 +314,35 @@ describe("Phase 5: Judging, Host Approval, Rubrics, Weighted Scoring, and Result
 
     // Rule 8 server enforcement: Student B is not a member of Team A and must be denied access
     expect(isStudentBInTeamA).toBe(false);
+  });
+
+  afterAll(async () => {
+    // Clean up
+    for (const t of [teamA, teamB]) {
+      if (t?.id) {
+        await prisma.result.deleteMany({ where: { teamId: t.id } }).catch(() => {});
+        await prisma.score.deleteMany({ where: { submission: { teamId: t.id } } }).catch(() => {});
+        await prisma.submission.deleteMany({ where: { teamId: t.id } }).catch(() => {});
+        await prisma.teamMember.deleteMany({ where: { teamId: t.id } }).catch(() => {});
+        await prisma.team.delete({ where: { id: t.id } }).catch(() => {});
+      }
+    }
+
+    if (judgeUser?.id) {
+      await prisma.judgeProfile.deleteMany({ where: { userId: judgeUser.id } }).catch(() => {});
+      await prisma.user.delete({ where: { id: judgeUser.id } }).catch(() => {});
+    }
+
+    for (const u of [studentUserA, studentUserB]) {
+      if (u?.id) {
+        await prisma.studentProfile.deleteMany({ where: { userId: u.id } }).catch(() => {});
+        await prisma.user.delete({ where: { id: u.id } }).catch(() => {});
+      }
+    }
+
+    if (testHackathon?.id) {
+      await prisma.rubricCriterion.deleteMany({ where: { hackathonId: testHackathon.id } }).catch(() => {});
+      await prisma.hackathon.delete({ where: { id: testHackathon.id } }).catch(() => {});
+    }
   });
 });

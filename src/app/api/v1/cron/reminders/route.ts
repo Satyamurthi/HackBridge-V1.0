@@ -80,7 +80,7 @@ async function handleReminders(req: NextRequest) {
             {
               title: `Milestone Reminder: ${team.name}`,
               message: `It has been over 30 minutes since your team logged a milestone progress update in "${hackathon.title}". Please log your current 10% checkpoint.`,
-              link: `/dashboard/student/arena?teamId=${team.id}`,
+              link: `/dashboard/student/arena/${team.id}`,
               metadata: {
                 teamId: team.id,
                 hackathonId: hackathon.id,

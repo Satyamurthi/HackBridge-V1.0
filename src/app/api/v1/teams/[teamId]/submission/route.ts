@@ -144,7 +144,7 @@ export async function POST(
     await createBulkNotifications(memberUserIds, "SUBMISSION_LOCKED", {
       title: "Project Submission Locked",
       message: `Final project submission for "${team.hackathon.title}" has been permanently locked for evaluation.`,
-      link: `/dashboard/student/arena?teamId=${team.id}`,
+      link: `/dashboard/student/arena/${team.id}`,
       metadata: { teamId: team.id, hackathonId: team.hackathon.id },
     });
 

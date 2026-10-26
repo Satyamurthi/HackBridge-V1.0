@@ -85,7 +85,7 @@ export async function PATCH(
     await createBulkNotifications(memberUserIds, "SUBMISSION_UNLOCKED", {
       title: "Project Submission Unlocked",
       message: `Your project submission for "${submission.team.hackathon.title}" was unlocked by host. Reason: ${unlockReason.trim()}`,
-      link: `/dashboard/student/arena?teamId=${submission.team.id}`,
+      link: `/dashboard/student/arena/${submission.team.id}`,
       metadata: {
         teamId: submission.team.id,
         hackathonId: submission.team.hackathon.id,
