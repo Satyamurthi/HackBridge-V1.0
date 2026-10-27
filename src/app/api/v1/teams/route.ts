@@ -141,6 +141,53 @@ export async function POST(req: NextRequest) {
 
     const now = new Date();
 
+    const body = await req.json().catch(() => ({}));
+    const rawHackathonId = body.hackathonId;
+    const rawTeamName = (body.teamName || body.name || "").trim();
+
+    if (process.env.NODE_ENV !== "production") {
+      console.log("[POST /api/v1/teams] Received request payload:", JSON.stringify(body, null, 2));
+    }
+
+    if (!rawHackathonId || !rawTeamName) {
+      const errorMsg = "hackathonId and teamName are required";
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("[POST /api/v1/teams] Validation failure:", errorMsg);
+      }
+      return NextResponse.json({ error: errorMsg }, { status: 400 });
+    }
+
+    // Verify hackathon exists and is published
+    const hackathon = await prisma.hackathon.findFirst({
+      where: {
+        OR: [{ id: rawHackathonId }, { slug: rawHackathonId }],
+      },
+    });
+
+    if (!hackathon) {
+      const errorMsg = "Hackathon not found";
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("[POST /api/v1/teams] Validation failure:", errorMsg);
+      }
+      return NextResponse.json({ error: errorMsg }, { status: 404 });
+    }
+
+    if (hackathon.status !== "PUBLISHED") {
+      const errorMsg = "Hackathon is not open for applications (Status: " + hackathon.status + ")";
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("[POST /api/v1/teams] Validation failure:", errorMsg);
+      }
+      return NextResponse.json({ error: errorMsg }, { status: 400 });
+    }
+
+    if (new Date(hackathon.endAt) <= now) {
+      const errorMsg = "This hackathon has already concluded.";
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("[POST /api/v1/teams] Validation failure:", errorMsg);
+      }
+      return NextResponse.json({ error: errorMsg }, { status: 400 });
+    }
+
     // PRD Non-Negotiable Rule 1: A student can belong to only one active hackathon registration.
     const activeLeadMembership = leadStudent.teamMemberships.find(
       (m) =>
@@ -149,55 +196,57 @@ export async function POST(req: NextRequest) {
     );
 
     if (activeLeadMembership) {
-      return NextResponse.json(
-        {
-          error: `You are already registered in an active hackathon: "${activeLeadMembership.team.hackathon.title}" with team "${activeLeadMembership.team.name}". PRD Rule 1 restricts students to one active hackathon at a time.`,
-        },
-        { status: 400 }
-      );
+      // If student already has a PENDING draft team in THIS SAME hackathon, return/resume it seamlessly
+      if (
+        activeLeadMembership.team.hackathonId === hackathon.id &&
+        activeLeadMembership.team.status === "PENDING"
+      ) {
+        if (process.env.NODE_ENV !== "production") {
+          console.log(
+            "[POST /api/v1/teams] Lead already has pending draft application in this hackathon. Resuming team:",
+            activeLeadMembership.team.id
+          );
+        }
+        return NextResponse.json(
+          {
+            team: activeLeadMembership.team,
+            message: "Existing draft squad retrieved. Proceed to payment verification.",
+            isExisting: true,
+          },
+          { status: 200 }
+        );
+      }
+
+      const errorMsg = `You are already registered in an active hackathon: "${activeLeadMembership.team.hackathon.title}" with team "${activeLeadMembership.team.name}". PRD Rule 1 restricts students to one active hackathon at a time.`;
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("[POST /api/v1/teams] Validation failure:", errorMsg);
+      }
+      return NextResponse.json({ error: errorMsg }, { status: 400 });
     }
 
-    const body = await req.json();
-    const { hackathonId, teamName, teammateHackathonIds = [] } = body;
+    // Support both teammateHackathonIds (string[]) and members (array of { studentId } or { hackathonId } or string)
+    let rawTeammateInputs: string[] = [];
 
-    if (!hackathonId || !teamName?.trim()) {
-      return NextResponse.json(
-        { error: "hackathonId and teamName are required" },
-        { status: 400 }
-      );
+    if (Array.isArray(body.teammateHackathonIds)) {
+      rawTeammateInputs.push(...body.teammateHackathonIds.map(String));
+    }
+    if (Array.isArray(body.members)) {
+      for (const m of body.members) {
+        if (typeof m === "string") {
+          rawTeammateInputs.push(m);
+        } else if (m && typeof m === "object") {
+          if (m.hackathonId) rawTeammateInputs.push(String(m.hackathonId));
+          else if (m.studentId) rawTeammateInputs.push(String(m.studentId));
+        }
+      }
     }
 
-    // Verify hackathon exists and is published
-    const hackathon = await prisma.hackathon.findFirst({
-      where: {
-        OR: [{ id: hackathonId }, { slug: hackathonId }],
-      },
-    });
-
-    if (!hackathon) {
-      return NextResponse.json({ error: "Hackathon not found" }, { status: 404 });
-    }
-
-    if (hackathon.status !== "PUBLISHED") {
-      return NextResponse.json(
-        { error: "Hackathon is not open for applications (Status: " + hackathon.status + ")" },
-        { status: 400 }
-      );
-    }
-
-    if (new Date(hackathon.endAt) <= now) {
-      return NextResponse.json(
-        { error: "This hackathon has already concluded." },
-        { status: 400 }
-      );
-    }
-
-    // Clean teammate IDs
+    // Clean teammate IDs and deduplicate
     const cleanTeammateIds: string[] = Array.from(
       new Set<string>(
-        (teammateHackathonIds as any[])
-          .map((id: any) => String(id || "").trim().toUpperCase())
-          .filter((id: string) => Boolean(id))
+        rawTeammateInputs
+          .map((id) => String(id || "").trim().toUpperCase())
+          .filter((id) => Boolean(id))
       )
     );
 
@@ -205,28 +254,34 @@ export async function POST(req: NextRequest) {
     const totalSquadSize = 1 + cleanTeammateIds.length;
 
     if (totalSquadSize < hackathon.teamMin || totalSquadSize > hackathon.teamMax) {
-      return NextResponse.json(
-        {
-          error: `Team size must be between ${hackathon.teamMin} and ${hackathon.teamMax} members (currently ${totalSquadSize})`,
-        },
-        { status: 400 }
-      );
+      const errorMsg = `Team size must be between ${hackathon.teamMin} and ${hackathon.teamMax} members (currently ${totalSquadSize})`;
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("[POST /api/v1/teams] Validation failure:", errorMsg);
+      }
+      return NextResponse.json({ error: errorMsg }, { status: 400 });
     }
 
     // Check that lead is not included in teammates list
-    if (cleanTeammateIds.includes(leadStudent.hackathonId.toUpperCase())) {
-      return NextResponse.json(
-        { error: "You cannot add yourself as a teammate" },
-        { status: 400 }
-      );
+    const leadHackathonIdUpper = leadStudent.hackathonId.toUpperCase();
+    if (cleanTeammateIds.some((id) => id === leadHackathonIdUpper || id === leadStudent.id.toUpperCase())) {
+      const errorMsg = "You cannot add yourself as a teammate";
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("[POST /api/v1/teams] Validation failure:", errorMsg);
+      }
+      return NextResponse.json({ error: errorMsg }, { status: 400 });
     }
 
     // Look up and validate all teammates
     const validatedTeammates: Array<{ id: string; userId: string; name: string; hackathonId: string }> = [];
 
     for (const hId of cleanTeammateIds) {
-      const teammateStudent = await prisma.studentProfile.findUnique({
-        where: { hackathonId: hId as string },
+      const teammateStudent = await prisma.studentProfile.findFirst({
+        where: {
+          OR: [
+            { hackathonId: hId },
+            { id: hId },
+          ],
+        },
         include: {
           user: { select: { name: true, email: true } },
           teamMemberships: {
@@ -240,10 +295,11 @@ export async function POST(req: NextRequest) {
       });
 
       if (!teammateStudent) {
-        return NextResponse.json(
-          { error: `Teammate with Hackathon ID "${hId}" does not exist` },
-          { status: 404 }
-        );
+        const errorMsg = `Teammate with Hackathon ID "${hId}" does not exist`;
+        if (process.env.NODE_ENV !== "production") {
+          console.warn("[POST /api/v1/teams] Validation failure:", errorMsg);
+        }
+        return NextResponse.json({ error: errorMsg }, { status: 404 });
       }
 
       // Check teammate's active hackathons
@@ -254,12 +310,11 @@ export async function POST(req: NextRequest) {
       );
 
       if (activeTeammateMembership) {
-        return NextResponse.json(
-          {
-            error: `Teammate ${teammateStudent.user.name} (${hId}) is already participating in an active hackathon: "${activeTeammateMembership.team.hackathon.title}"`,
-          },
-          { status: 400 }
-        );
+        const errorMsg = `Teammate ${teammateStudent.user.name} (${teammateStudent.hackathonId}) is already participating in an active hackathon: "${activeTeammateMembership.team.hackathon.title}"`;
+        if (process.env.NODE_ENV !== "production") {
+          console.warn("[POST /api/v1/teams] Validation failure:", errorMsg);
+        }
+        return NextResponse.json({ error: errorMsg }, { status: 400 });
       }
 
       validatedTeammates.push({
@@ -272,7 +327,18 @@ export async function POST(req: NextRequest) {
 
     const isFree = hackathon.fee === 0 || hackathon.paymentMode === "FREE";
     const initialStatus = isFree ? "ACTIVE" : "PENDING";
-    const initialTeamId = isFree ? generateTeamId() : null; // Rule 3: Only after verified payment
+    const initialTeamId = generateTeamId(); // Issue official Team ID upon squad creation
+
+    if (process.env.NODE_ENV !== "production") {
+      console.log("[POST /api/v1/teams] Validation succeeded. Creating team...", {
+        hackathon: hackathon.title,
+        teamName: rawTeamName,
+        teamId: initialTeamId,
+        status: initialStatus,
+        lead: leadStudent.user.name,
+        teammates: validatedTeammates.map((t) => t.name),
+      });
+    }
 
     // Execute atomic team creation
     const createdTeam = await prisma.$transaction(async (tx) => {
@@ -281,7 +347,7 @@ export async function POST(req: NextRequest) {
         data: {
           hackathonId: hackathon.id,
           leadStudentId: leadStudent.id,
-          name: teamName.trim(),
+          name: rawTeamName,
           status: initialStatus,
           teamId: initialTeamId,
         },

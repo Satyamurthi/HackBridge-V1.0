@@ -46,6 +46,9 @@ export async function GET(req: NextRequest) {
         orgName: hostProfile.orgName,
         type: hostProfile.type,
         approvalStatus: hostProfile.approvalStatus,
+        rejectionReason: hostProfile.rejectionReason,
+        hackId: hostProfile.hackId,
+        city: hostProfile.city,
       },
     });
   } catch (error: any) {

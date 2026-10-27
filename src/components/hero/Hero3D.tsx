@@ -129,9 +129,9 @@ export default function Hero3D() {
     const dotPositions = new Float32Array(dotCount * 3);
     const dotColors = new Float32Array(dotCount * 3);
 
-    const accentColor = new THREE.Color(0x6366f1); // Indigo from DESIGN-SYSTEM.md
-    const brightColor = new THREE.Color(0xa5b4fc); // Crisp light indigo
-    const faintColor = new THREE.Color(0x312e81);  // Deep indigo
+    const accentColor = new THREE.Color(0xff5a1f); // Electric orange
+    const brightColor = new THREE.Color(0xb8f34a); // Acid lime highlight
+    const faintColor = new THREE.Color(0xe04810);  // Warm deep orange
 
     for (let i = 0; i < dotCount; i++) {
       const phi = Math.acos(1 - (2 * (i + 0.5)) / dotCount);
@@ -167,19 +167,19 @@ export default function Hero3D() {
       vertexColors: true,
       transparent: true,
       opacity: 0.9,
-      blending: THREE.AdditiveBlending,
+      blending: THREE.NormalBlending,
       depthWrite: false,
     });
 
     const globeDots = new THREE.Points(dotGeo, dotMat);
     globeGroup.add(globeDots);
 
-    // Dark core sphere to mask backface dots (creates true 3D spherical depth)
+    // Warm core sphere to mask backface dots (creates true 3D spherical depth)
     const coreGeo = new THREE.SphereGeometry(GLOBE_RADIUS * 0.982, 36, 36);
     const coreMat = new THREE.MeshBasicMaterial({
-      color: 0x030407,
+      color: 0xfaf8f2,
       transparent: true,
-      opacity: 0.96,
+      opacity: 0.95,
     });
     const coreMesh = new THREE.Mesh(coreGeo, coreMat);
     globeGroup.add(coreMesh);
@@ -200,12 +200,11 @@ export default function Hero3D() {
     cityGeo.setAttribute("position", new THREE.BufferAttribute(cityDotPositions, 3));
 
     const cityMat = new THREE.PointsMaterial({
-      color: 0xffffff,
-      size: 1.1,
+      color: 0xff5a1f,
+      size: 1.2,
       map: circleTexture,
       transparent: true,
       opacity: 1.0,
-      blending: THREE.AdditiveBlending,
       depthWrite: false,
     });
 
@@ -234,9 +233,9 @@ export default function Hero3D() {
       const points = curve.getPoints(50);
       const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
       const lineMat = new THREE.LineBasicMaterial({
-        color: 0x6366f1,
+        color: 0xff5a1f,
         transparent: true,
-        opacity: 0.45,
+        opacity: 0.6,
       });
       const line = new THREE.Line(lineGeo, lineMat);
       arcLinesGroup.add(line);
@@ -249,12 +248,11 @@ export default function Hero3D() {
     pulseGeo.setAttribute("position", new THREE.BufferAttribute(pulsePositions, 3));
 
     const pulseMat = new THREE.PointsMaterial({
-      color: 0xffffff,
-      size: 1.3,
+      color: 0xb8f34a,
+      size: 1.4,
       map: circleTexture,
       transparent: true,
       opacity: 0.95,
-      blending: THREE.AdditiveBlending,
       depthWrite: false,
     });
     const pulsePoints = new THREE.Points(pulseGeo, pulseMat);
@@ -274,12 +272,11 @@ export default function Hero3D() {
     const starGeo = new THREE.BufferGeometry();
     starGeo.setAttribute("position", new THREE.BufferAttribute(starPositions, 3));
     const starMat = new THREE.PointsMaterial({
-      color: 0x818cf8,
+      color: 0xd4cebe,
       size: 0.35,
       map: circleTexture,
       transparent: true,
-      opacity: 0.45,
-      blending: THREE.AdditiveBlending,
+      opacity: 0.4,
       depthWrite: false,
     });
     const stars = new THREE.Points(starGeo, starMat);

@@ -97,7 +97,7 @@ export default function AboutPage() {
             </p>
             <div className="pt-4">
               <Link
-                href="/signup/host"
+                href="/register/college"
                 className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-black font-semibold text-xs hover:bg-slate-200 transition-colors"
               >
                 Apply as Collegiate Chapter

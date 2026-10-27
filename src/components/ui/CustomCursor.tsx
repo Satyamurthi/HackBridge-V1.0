@@ -82,16 +82,16 @@ export default function CustomCursor() {
     <>
       {/* Precision Core Dot */}
       <div
-        className="fixed top-0 left-0 w-1.5 h-1.5 bg-white rounded-full pointer-events-none z-[9999] -translate-x-1/2 -translate-y-1/2 transition-opacity duration-150"
+        className="fixed top-0 left-0 w-1.5 h-1.5 bg-[#6366F1] rounded-full pointer-events-none z-[9999] -translate-x-1/2 -translate-y-1/2 transition-opacity duration-150"
         style={{
           transform: `translate3d(${position.x}px, ${position.y}px, 0)`,
         }}
       />
       {/* Trailing Architectural Ring */}
       <div
-        className={`fixed top-0 left-0 rounded-full border border-white/30 pointer-events-none z-[9998] -translate-x-1/2 -translate-y-1/2 transition-all duration-150 ease-out ${
+        className={`fixed top-0 left-0 rounded-full border pointer-events-none z-[9998] -translate-x-1/2 -translate-y-1/2 transition-all duration-150 ease-out ${
           isHovering
-            ? "w-8 h-8 border-[#6366F1] bg-[#6366F1]/10 scale-110"
+            ? "w-8 h-8 border-[#6366F1] bg-[#6366F1]/15 scale-110"
             : "w-5 h-5 border-white/20"
         }`}
         style={{

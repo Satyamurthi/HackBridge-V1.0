@@ -57,6 +57,11 @@ model HostProfile {
   membershipStatus String      @default("ACTIVE")
   website         String?
   bio             String?
+  city            String?
+  address         String?
+  docUrl          String?
+  hackId          String?      @unique // Permanent Host ID: HOST-XXXXXX
+  rejectionReason String?
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 

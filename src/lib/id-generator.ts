@@ -35,3 +35,17 @@ export function generateTeamId(): string {
 export function isValidHackathonId(id: string): boolean {
   return /^HB-[A-Z0-9]{6}$/.test(id.trim().toUpperCase());
 }
+
+/**
+ * Generates a unique Host Hackathon ID
+ * Format: HOST-XXXXXX (e.g., HOST-782914)
+ */
+export function generateHostHackId(): string {
+  const chars = "0123456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+  let result = "";
+  const randomBytes = crypto.randomBytes(6);
+  for (let i = 0; i < 6; i++) {
+    result += chars[randomBytes[i] % chars.length];
+  }
+  return `HOST-${result}`;
+}

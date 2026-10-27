@@ -103,3 +103,72 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Failed to load student profile" }, { status: 500 });
   }
 }
+
+// PATCH /api/v1/students/me — Update editable student profile fields
+export async function PATCH(req: NextRequest) {
+  try {
+    const session = await getSession();
+    if (!session || session.role !== "STUDENT") {
+      return NextResponse.json({ error: "Student session required" }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const { college, githubUsername, bio, skills, phone, name } = body;
+
+    // Update User record if name or phone provided
+    const userUpdateData: any = {};
+    if (typeof name === "string" && name.trim()) userUpdateData.name = name.trim();
+    if (typeof phone === "string") userUpdateData.phone = phone.trim();
+
+    if (Object.keys(userUpdateData).length > 0) {
+      await prisma.user.update({
+        where: { id: session.userId },
+        data: userUpdateData,
+      });
+    }
+
+    // Update StudentProfile record
+    const profileUpdateData: any = {};
+    if (typeof college === "string" && college.trim()) profileUpdateData.college = college.trim();
+    if (typeof githubUsername === "string") {
+      // Strip @ if included
+      profileUpdateData.githubUsername = githubUsername.trim().replace(/^@/, "");
+    }
+    if (typeof bio === "string") profileUpdateData.bio = bio.trim();
+    if (typeof skills === "string") profileUpdateData.skills = skills.trim();
+
+    const updatedStudent = await prisma.studentProfile.update({
+      where: { userId: session.userId },
+      data: profileUpdateData,
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+          },
+        },
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: "Profile updated successfully",
+      student: {
+        id: updatedStudent.id,
+        hackathonId: updatedStudent.hackathonId,
+        college: updatedStudent.college,
+        githubUsername: updatedStudent.githubUsername,
+        bio: updatedStudent.bio,
+        skills: updatedStudent.skills,
+        name: updatedStudent.user.name,
+        email: updatedStudent.user.email,
+        phone: updatedStudent.user.phone,
+      },
+    });
+  } catch (error: any) {
+    console.error("[Students ME PATCH Error]:", error);
+    return NextResponse.json({ error: "Failed to update profile" }, { status: 500 });
+  }
+}

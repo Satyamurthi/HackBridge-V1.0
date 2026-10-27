@@ -15,6 +15,9 @@ export async function GET(
       );
     }
 
+    const { searchParams } = new URL(req.url);
+    const currentHackathonId = searchParams.get("currentHackathonId");
+
     // Lookup student by permanent Hackathon ID (HB-XXXXXX)
     const student = await prisma.studentProfile.findUnique({
       where: { hackathonId: rawId },
@@ -24,7 +27,13 @@ export async function GET(
         },
         teamMemberships: {
           include: {
-            team: true,
+            team: {
+              include: {
+                hackathon: {
+                  select: { id: true, slug: true, title: true, endAt: true },
+                },
+              },
+            },
           },
         },
       },
@@ -37,11 +46,29 @@ export async function GET(
       );
     }
 
+    const now = new Date();
+
     // Check if student belongs to an active team registration
     // Non-negotiable rule 1: A student can belong to only one active hackathon registration.
     const activeTeamMembership = student.teamMemberships.find(
-      (m) => m.team.status === "ACTIVE" || m.team.status === "PENDING"
+      (m) =>
+        (m.team.status === "ACTIVE" || m.team.status === "PENDING") &&
+        new Date(m.team.hackathon.endAt) > now
     );
+
+    const isSameHackathonPending =
+      Boolean(activeTeamMembership) &&
+      Boolean(currentHackathonId) &&
+      (activeTeamMembership?.team.hackathonId === currentHackathonId ||
+        activeTeamMembership?.team.hackathon.slug === currentHackathonId) &&
+      activeTeamMembership?.team.status === "PENDING";
+
+    const isEligible = !activeTeamMembership || isSameHackathonPending;
+
+    let blockedReason: string | null = null;
+    if (activeTeamMembership && !isSameHackathonPending) {
+      blockedReason = `Student is already registered in active event "${activeTeamMembership.team.hackathon.title}" with squad "${activeTeamMembership.team.name}"`;
+    }
 
     return NextResponse.json({
       exists: true,
@@ -49,10 +76,18 @@ export async function GET(
       hackathonId: student.hackathonId,
       name: student.user.name,
       college: student.college,
-      isEligible: !activeTeamMembership,
-      blockedReason: activeTeamMembership
-        ? "Student is already registered in an active team (" + activeTeamMembership.team.name + ")"
+      isEligible,
+      isSameHackathonPending,
+      activeTeam: activeTeamMembership
+        ? {
+            id: activeTeamMembership.team.id,
+            name: activeTeamMembership.team.name,
+            status: activeTeamMembership.team.status,
+            hackathonTitle: activeTeamMembership.team.hackathon.title,
+            hackathonSlug: activeTeamMembership.team.hackathon.slug,
+          }
         : null,
+      blockedReason,
     });
   } catch (error: any) {
     console.error("[Student Lookup Error]:", error);

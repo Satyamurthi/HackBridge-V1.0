@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { hashPassword, signSessionToken, COOKIE_NAME } from "@/lib/auth";
-import { generateHackathonId } from "@/lib/id-generator";
+import { generateHackathonId, generateHostHackId } from "@/lib/id-generator";
 import { logAuditEvent } from "@/lib/audit";
 
 const SignupSchema = z.object({
@@ -19,7 +19,10 @@ const SignupSchema = z.object({
 
   // Host specific fields
   orgName: z.string().optional(),
-  orgType: z.enum(["college", "company"]).optional(),
+  orgType: z.string().optional(),
+  city: z.string().optional(),
+  address: z.string().optional(),
+  docUrl: z.string().optional(),
   website: z.string().optional(),
   bio: z.string().optional(),
 
@@ -52,6 +55,9 @@ export async function POST(req: NextRequest) {
       skills,
       orgName,
       orgType,
+      city,
+      address,
+      docUrl,
       website,
       bio,
       hackathonId,
@@ -166,6 +172,17 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      // Generate unique Host Hackathon ID (HOST-XXXXXX)
+      let assignedHostId = "";
+      let isHostUnique = false;
+      while (!isHostUnique) {
+        assignedHostId = generateHostHackId();
+        const existingHost = await prisma.hostProfile.findUnique({
+          where: { hackId: assignedHostId },
+        });
+        if (!existingHost) isHostUnique = true;
+      }
+
       // Host starts in PENDING status until approved by Super Admin
       const newUser = await prisma.user.create({
         data: {
@@ -178,7 +195,11 @@ export async function POST(req: NextRequest) {
           hostProfile: {
             create: {
               orgName,
-              type: orgType,
+              type: orgType.toLowerCase(),
+              city,
+              address,
+              docUrl,
+              hackId: assignedHostId,
               approvalStatus: "PENDING",
               website,
               bio,
@@ -193,7 +214,7 @@ export async function POST(req: NextRequest) {
         action: "HOST_SIGNUP_PENDING",
         entity: "HOST",
         entityId: newUser.hostProfile!.id,
-        metadata: { orgName, orgType },
+        metadata: { orgName, orgType, hackId: assignedHostId },
       });
 
       const token = signSessionToken({
@@ -202,6 +223,7 @@ export async function POST(req: NextRequest) {
         role: "HOST",
         status: "PENDING",
         name: newUser.name,
+        hackathonId: assignedHostId,
         profileId: newUser.hostProfile?.id,
       });
 
@@ -213,6 +235,8 @@ export async function POST(req: NextRequest) {
           email: newUser.email,
           name: newUser.name,
           role: newUser.role,
+          hackId: assignedHostId,
+          orgName: newUser.hostProfile?.orgName,
           approvalStatus: "PENDING",
         },
       });

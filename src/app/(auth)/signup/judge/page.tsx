@@ -54,9 +54,9 @@ export default function JudgeSignupPage() {
   };
 
   return (
-    <div className="flex-1 flex min-h-[calc(100vh-65px)]">
+    <div className="flex-1 flex min-h-[calc(100vh-65px)] bg-transparent">
       {/* Left Brand Panel */}
-      <div className="hidden lg:flex lg:w-5/12 bg-[#06080F] border-r border-white/[0.08] p-12 flex-col justify-between">
+      <div className="hidden lg:flex lg:w-5/12 bg-[#0B0E18]/60 backdrop-blur-md border-r border-white/[0.08] p-12 flex-col justify-between">
         <div className="space-y-6">
           <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded bg-white/[0.04] border border-white/10 text-[11px] font-mono text-slate-400">
             <span className="w-1.5 h-1.5 rounded-full bg-[#6366F1]" />
@@ -91,11 +91,11 @@ export default function JudgeSignupPage() {
       </div>
 
       {/* Right Form Panel */}
-      <div className="flex-1 flex items-center justify-center p-6 md:p-12 bg-[#030407]">
+      <div className="flex-1 flex items-center justify-center p-6 md:p-12 bg-transparent">
         <div className="w-full max-w-lg space-y-6">
           {submitted ? (
             /* Pending Judge Review Screen */
-            <div className="bg-[#0B0E18] border border-white/[0.08] p-8 rounded-2xl space-y-6 text-center">
+            <div className="bg-[#0B0E18]/80 backdrop-blur-md border border-white/[0.08] p-8 rounded-2xl space-y-6 text-center">
               <div className="w-12 h-12 rounded-xl bg-white/[0.04] border border-white/10 text-slate-300 mx-auto flex items-center justify-center">
                 <Clock className="w-6 h-6 text-[#6366F1]" />
               </div>
@@ -123,7 +123,7 @@ export default function JudgeSignupPage() {
               <button
                 type="button"
                 onClick={() => router.push("/dashboard/judge")}
-                className="w-full py-3 rounded-xl bg-white hover:bg-slate-200 text-black font-bold text-xs uppercase tracking-wider transition-colors"
+                className="w-full py-3 rounded-xl bg-[#6366F1] hover:bg-[#4F46E5] text-white font-bold text-xs uppercase tracking-wider transition-colors"
               >
                 Enter Judge Portal (Awaiting Authorization)
               </button>
@@ -241,11 +241,11 @@ export default function JudgeSignupPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3 rounded-xl bg-white hover:bg-slate-200 text-black font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-colors disabled:opacity-50 cursor-pointer"
+                  className="w-full py-3 rounded-xl bg-[#6366F1] hover:bg-[#4F46E5] text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   {loading ? (
                     <span className="flex items-center gap-2">
-                      <div className="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                       Registering Judge...
                     </span>
                   ) : (

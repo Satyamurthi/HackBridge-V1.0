@@ -14,7 +14,12 @@ import {
   ArrowRight,
   FileText,
   Lock,
-  ExternalLink
+  ExternalLink,
+  Sun,
+  Moon,
+  AlertCircle,
+  CheckCircle2,
+  KeyRound
 } from "lucide-react";
 
 interface StudentData {
@@ -48,15 +53,74 @@ export default function StudentProfilePage() {
   const [copied, setCopied] = useState(false);
   const [exporting, setExporting] = useState(false);
 
+  // Edit profile form state
+  const [college, setCollege] = useState("");
+  const [githubUsername, setGithubUsername] = useState("");
+  const [bio, setBio] = useState("");
+  const [skills, setSkills] = useState("");
+  const [phone, setPhone] = useState("");
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
+  const [profileError, setProfileError] = useState<string | null>(null);
+
+  // Change password form state
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [savingPassword, setSavingPassword] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+
+  // Theme preference state
+  const [currentTheme, setCurrentTheme] = useState<"dark" | "light">("dark");
+
   useEffect(() => {
-    fetch("/api/v1/students/me")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("hb_theme");
+      setCurrentTheme(stored === "light" ? "light" : "dark");
+    }
+  }, []);
+
+  const setTheme = (theme: "dark" | "light") => {
+    if (typeof window === "undefined") return;
+    if (theme === "light") {
+      document.documentElement.classList.remove("dark");
+      document.documentElement.classList.add("light");
+      document.documentElement.style.colorScheme = "light";
+      localStorage.setItem("hb_theme", "light");
+      setCurrentTheme("light");
+    } else {
+      document.documentElement.classList.add("dark");
+      document.documentElement.classList.remove("light");
+      document.documentElement.style.colorScheme = "dark";
+      localStorage.setItem("hb_theme", "dark");
+      setCurrentTheme("dark");
+    }
+  };
+
+  const loadProfile = async () => {
+    try {
+      const res = await fetch("/api/v1/students/me");
+      if (res.ok) {
+        const data = await res.json();
         if (data?.student) {
           setStudent(data.student);
+          setCollege(data.student.college || "");
+          setGithubUsername(data.student.githubUsername || "");
+          setBio(data.student.bio || "");
+          setSkills(data.student.skills || "");
+          setPhone(data.student.phone || "");
         }
-      })
-      .finally(() => setLoading(false));
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadProfile();
   }, []);
 
   const copyId = () => {
@@ -64,6 +128,85 @@ export default function StudentProfilePage() {
     navigator.clipboard.writeText(student.hackathonId);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingProfile(true);
+    setProfileSuccess(null);
+    setProfileError(null);
+
+    try {
+      const res = await fetch("/api/v1/students/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          college: college.trim(),
+          githubUsername: githubUsername.trim(),
+          bio: bio.trim(),
+          skills: skills.trim(),
+          phone: phone.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setProfileError(data.error || "Failed to update profile.");
+        setSavingProfile(false);
+        return;
+      }
+
+      setProfileSuccess("Profile information saved successfully!");
+      await loadProfile();
+    } catch {
+      setProfileError("Network error saving profile changes.");
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      setPasswordError("New passwords do not match.");
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      setPasswordError("New password must be at least 8 characters long.");
+      return;
+    }
+
+    setSavingPassword(true);
+    setPasswordSuccess(null);
+    setPasswordError(null);
+
+    try {
+      const res = await fetch("/api/v1/auth/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentPassword,
+          newPassword,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setPasswordError(data.error || "Failed to change password.");
+        setSavingPassword(false);
+        return;
+      }
+
+      setPasswordSuccess("Password updated successfully!");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch {
+      setPasswordError("Network error changing password.");
+    } finally {
+      setSavingPassword(false);
+    }
   };
 
   const handleDownloadExport = async () => {
@@ -90,20 +233,31 @@ export default function StudentProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-[70vh] flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-[#6366F1] border-t-transparent rounded-full animate-spin" />
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 w-full">
+        <div className="space-y-6">
+          <div className="h-14 rounded-2xl bg-[#0B0E18]/55 border border-white/[0.08] animate-pulse" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="h-72 rounded-2xl bg-[#0B0E18]/55 border border-white/[0.08] animate-pulse" />
+            <div className="h-72 rounded-2xl bg-[#0B0E18]/55 border border-white/[0.08] animate-pulse" />
+          </div>
+        </div>
       </div>
     );
   }
 
   if (!student) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-20 text-center">
-        <h2 className="text-xl font-bold text-white mb-2">Student Profile Not Found</h2>
-        <p className="text-sm text-slate-400 mb-6">Please log in as a student to view your profile.</p>
+      <div className="max-w-md mx-auto px-4 py-20 text-center relative z-10">
+        <div className="p-3 rounded-full bg-white/[0.04] border border-white/10 w-fit mx-auto mb-4">
+          <Lock className="w-6 h-6 text-[#94A3B8]" />
+        </div>
+        <h1 className="font-display text-xl font-bold text-[#F8FAFC] mb-2">Student Session Required</h1>
+        <p className="text-xs text-[#94A3B8] mb-6 leading-relaxed">
+          Please sign in with your student credentials to view your profile and account settings.
+        </p>
         <Link
-          href="/login"
-          className="inline-flex items-center px-4 py-2 rounded bg-[#6366F1] text-white text-xs font-semibold"
+          href="/login?redirect=/dashboard/student/profile"
+          className="px-5 py-2.5 rounded-lg bg-[#6366F1] text-white font-semibold text-xs hover:bg-[#4F46E5] transition-colors inline-block"
         >
           Sign In
         </Link>
@@ -111,230 +265,361 @@ export default function StudentProfilePage() {
     );
   }
 
-  const skillsList = student.skills
-    ? student.skills.split(",").map((s) => s.trim()).filter(Boolean)
-    : ["TypeScript", "Fullstack", "Distributed Systems"];
-
   return (
-    <div className="max-w-6xl mx-auto px-4 md:px-8 py-12 space-y-10">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.06] pb-8">
-        <div>
-          <div className="text-[11px] font-mono uppercase tracking-wider text-slate-500 mb-1">
-            IDENTITY & DATA PRINCIPAL
+    <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 w-full space-y-8 relative z-10 text-[#F8FAFC]">
+      {/* Header & Breadcrumb */}
+      <div className="pb-6 border-b border-white/[0.08] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="text-[11px] font-mono text-[#64748B] uppercase tracking-wider flex items-center gap-2">
+            <Link href="/dashboard/student" className="hover:text-[#818CF8]">Dashboard</Link>
+            <span>/</span>
+            <span className="text-[#818CF8] font-bold">Profile</span>
           </div>
-          <h1 className="font-display text-3xl font-extrabold text-white tracking-tight">
-            Student Profile
+          <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-[#F8FAFC] tracking-tight">
+            Student Profile & Settings
           </h1>
+          <p className="text-xs text-[#94A3B8] font-mono">
+            Permanent cryptographic credentials, editable portfolio fields, and account security.
+          </p>
         </div>
 
-        {/* Permanent Hackathon ID Badge */}
-        <div className="flex items-center gap-3">
-          <div
-            onClick={copyId}
-            className="flex items-center gap-2.5 px-3.5 py-2 rounded-lg bg-white/[0.04] border border-white/10 hover:border-white/20 transition-all cursor-pointer group"
-            title="Click to copy permanent Hackathon ID"
-          >
-            <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">
-              PERMANENT ID
-            </span>
-            <span className="text-sm font-mono font-bold text-white tracking-wide">
-              {student.hackathonId}
-            </span>
-            {copied ? (
-              <Check className="w-3.5 h-3.5 text-emerald-400" />
-            ) : (
-              <Copy className="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-300 transition-colors" />
-            )}
-          </div>
+        {/* Permanent Hackathon ID Chip */}
+        <div
+          onClick={copyId}
+          className="flex items-center gap-2.5 px-3.5 py-2 rounded-2xl bg-[#0B0E18]/55 backdrop-blur-md border border-white/[0.08] hover:border-[#6366F1]/50 transition-colors cursor-pointer self-start sm:self-auto shadow-sm"
+          title="Click to copy permanent Hackathon ID"
+        >
+          <span className="text-[10px] font-mono text-[#64748B] uppercase font-bold">ID</span>
+          <span className="text-sm font-mono font-extrabold text-[#F8FAFC]">{student.hackathonId}</span>
+          {copied ? <Check className="w-4 h-4 text-[#6366F1]" /> : <Copy className="w-4 h-4 text-[#64748B]" />}
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left Column: Profile Card & Skills */}
+        {/* Left Column (7 cols): Identity & Editable Fields */}
         <div className="lg:col-span-7 space-y-6">
-          {/* Identity Card */}
-          <div className="p-6 rounded-xl bg-white/[0.02] border border-white/[0.08] space-y-6">
-            <div className="flex items-start gap-4">
-              <div className="w-14 h-14 rounded-full bg-[#6366F1]/10 border border-[#6366F1]/30 flex items-center justify-center text-[#6366F1] font-display font-bold text-xl flex-shrink-0">
-                {student.name.slice(0, 2).toUpperCase()}
-              </div>
-              <div className="space-y-1">
-                <h2 className="text-lg font-bold text-white tracking-tight">{student.name}</h2>
-                <p className="text-xs font-mono text-slate-400">{student.email}</p>
-                <div className="flex items-center gap-2 pt-1 text-xs text-slate-400">
-                  <Building className="w-3.5 h-3.5 text-slate-500" />
-                  <span>{student.college}</span>
+          {/* Main Profile Form */}
+          <div className="bg-[#0B0E18]/55 backdrop-blur-md border border-white/[0.08] rounded-3xl p-6 sm:p-7 space-y-6 shadow-xl">
+            <div className="flex items-center justify-between pb-4 border-b border-white/[0.08]">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-[#6366F1]/15 border border-[#6366F1]/30 flex items-center justify-center text-[#818CF8] font-display font-extrabold text-lg">
+                  {student.name.slice(0, 2).toUpperCase()}
+                </div>
+                <div>
+                  <h2 className="font-display text-lg font-bold text-[#F8FAFC]">{student.name}</h2>
+                  <p className="text-xs font-mono text-[#94A3B8]">{student.email}</p>
                 </div>
               </div>
-            </div>
 
-            {student.bio && (
-              <div className="pt-4 border-t border-white/[0.06]">
-                <p className="text-xs text-slate-300 leading-relaxed">{student.bio}</p>
-              </div>
-            )}
-
-            {student.githubUsername && (
-              <div className="flex items-center gap-2 pt-2 text-xs font-mono text-slate-400">
-                <Github className="w-4 h-4 text-slate-500" />
-                <a
-                  href={`https://github.com/${student.githubUsername}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="hover:text-white transition-colors flex items-center gap-1 text-[#6366F1]"
-                >
-                  github.com/{student.githubUsername}
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-              </div>
-            )}
-
-            {/* Skills Tags */}
-            <div className="pt-4 border-t border-white/[0.06] space-y-2">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500">
-                Technical Capabilities
+              <span className="text-[10px] font-mono uppercase px-2.5 py-1 rounded bg-[#6366F1]/15 text-[#818CF8] border border-[#6366F1]/30 font-bold">
+                {student.status}
               </span>
-              <div className="flex flex-wrap gap-2">
-                {skillsList.map((skill, i) => (
-                  <span
-                    key={i}
-                    className="px-2.5 py-1 rounded bg-white/[0.04] border border-white/10 text-xs font-mono text-slate-300"
-                  >
-                    {skill}
-                  </span>
-                ))}
-              </div>
             </div>
+
+            {profileSuccess && (
+              <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs font-mono text-emerald-300 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+                <span>{profileSuccess}</span>
+              </div>
+            )}
+
+            {profileError && (
+              <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-xs font-mono text-red-300 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+                <span>{profileError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveProfile} className="space-y-4 text-xs font-mono">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[#94A3B8] font-bold block text-[11px]">
+                    Full Name (Cryptographic Principal)
+                  </label>
+                  <input
+                    type="text"
+                    disabled
+                    value={student.name}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.02] border border-white/[0.06] text-[#64748B] text-xs font-mono cursor-not-allowed"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[#94A3B8] font-bold block text-[11px]">
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    disabled
+                    value={student.email}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.02] border border-white/[0.06] text-[#64748B] text-xs font-mono cursor-not-allowed"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[#F8FAFC] font-bold block text-[11px]">
+                    College / University <span className="text-[#818CF8]">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={college}
+                    onChange={(e) => setCollege(e.target.value)}
+                    placeholder="e.g., Indian Institute of Technology"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[#F8FAFC] text-xs font-mono focus:outline-none focus:border-[#6366F1]"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[#F8FAFC] font-bold block text-[11px]">
+                    GitHub Username
+                  </label>
+                  <div className="relative flex items-center">
+                    <span className="absolute left-3 text-[#64748B]">@</span>
+                    <input
+                      type="text"
+                      value={githubUsername}
+                      onChange={(e) => setGithubUsername(e.target.value)}
+                      placeholder="username"
+                      className="w-full pl-7 pr-3.5 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[#F8FAFC] text-xs font-mono focus:outline-none focus:border-[#6366F1]"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[#F8FAFC] font-bold block text-[11px]">
+                    Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="+91 98765 43210"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[#F8FAFC] text-xs font-mono focus:outline-none focus:border-[#6366F1]"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[#F8FAFC] font-bold block text-[11px]">
+                    Technical Skills (comma-separated)
+                  </label>
+                  <input
+                    type="text"
+                    value={skills}
+                    onChange={(e) => setSkills(e.target.value)}
+                    placeholder="TypeScript, Python, Next.js, Docker"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[#F8FAFC] text-xs font-mono focus:outline-none focus:border-[#6366F1]"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[#F8FAFC] font-bold block text-[11px]">
+                  Engineering Bio
+                </label>
+                <textarea
+                  rows={3}
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  placeholder="Describe your technical focus, competitive hackathon experience, or research interests..."
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[#F8FAFC] text-xs font-mono focus:outline-none focus:border-[#6366F1] resize-none"
+                />
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={savingProfile}
+                  className="px-5 py-2.5 rounded-xl bg-[#6366F1] hover:bg-[#4F46E5] text-white font-bold text-xs transition-colors shadow-sm disabled:opacity-40"
+                >
+                  {savingProfile ? "Saving Changes..." : "Save Profile Changes"}
+                </button>
+              </div>
+            </form>
           </div>
 
-          {/* DPDP Act Section 12 Data Export Card */}
-          <div className="p-6 rounded-xl bg-white/[0.02] border border-white/[0.08] space-y-4">
+          {/* DPDP Act Section 12 Data Export */}
+          <div className="bg-[#0B0E18]/55 backdrop-blur-md border border-white/[0.08] rounded-3xl p-6 sm:p-7 space-y-4 shadow-xl">
             <div className="flex items-start justify-between gap-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-[#6366F1]" />
-                  <h3 className="text-sm font-bold text-white tracking-tight">
-                    DPDP Act Compliance & Data Portability
+                  <Shield className="w-4 h-4 text-[#818CF8]" />
+                  <h3 className="font-display text-sm font-bold text-[#F8FAFC]">
+                    DPDP Act 2023 · Personal Data Portability
                   </h3>
                 </div>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Under Section 12 of India&apos;s Digital Personal Data Protection (DPDP) Act, 2023, you hold the right to obtain a portable, machine-readable archive of all personal data, team submissions, evaluations, and audit logs.
+                <p className="text-xs text-[#94A3B8] leading-relaxed">
+                  Under Section 12 of the Digital Personal Data Protection Act, you have the right to download a machine-readable JSON archive of all personal data, memberships, and transaction logs.
                 </p>
               </div>
-            </div>
 
-            <div className="pt-2">
               <button
-                type="button"
                 onClick={handleDownloadExport}
                 disabled={exporting}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] border border-white/10 text-xs font-mono font-medium text-white transition-all disabled:opacity-50"
+                className="px-4 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-xs font-mono font-bold text-[#F8FAFC] flex items-center gap-1.5 shrink-0 transition-colors"
               >
-                <Download className="w-3.5 h-3.5 text-[#6366F1]" />
-                <span>{exporting ? "Compiling Archive..." : "Download Personal Data Archive (.json)"}</span>
+                <Download className="w-3.5 h-3.5 text-[#818CF8]" />
+                {exporting ? "Generating..." : "Export JSON"}
               </button>
             </div>
           </div>
         </div>
 
-        {/* Right Column: Invariant Rule Status & Registration State */}
+        {/* Right Column (5 cols): Security, Invariant Rule 1 & Theme */}
         <div className="lg:col-span-5 space-y-6">
-          {/* Active Registration Status Card */}
-          <div className="p-6 rounded-xl bg-white/[0.02] border border-white/[0.08] space-y-4">
-            <div className="text-[10px] font-mono uppercase tracking-wider text-slate-500">
-              PRD INVARIANT RULE 1
+          {/* Institutional Invariant Rule 1 Status */}
+          <div className="bg-[#0B0E18]/55 backdrop-blur-md border border-white/[0.08] rounded-3xl p-6 space-y-3 shadow-xl text-xs font-mono">
+            <div className="text-[10px] uppercase text-[#64748B] tracking-wider font-bold">
+              PRD Invariant Rule 1 Status
             </div>
-            <h3 className="text-sm font-bold text-white tracking-tight">
-              Single Active Registration Status
-            </h3>
 
             {student.activeRegistration ? (
-              <div className="p-4 rounded-lg bg-white/[0.02] border border-white/10 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-semibold">
-                    ACTIVE SQUAD
-                  </span>
-                  <span className="text-xs font-mono text-slate-400">
-                    Role: {student.activeRegistration.role}
-                  </span>
+              <div className="space-y-2">
+                <div className="flex items-center gap-1.5 text-[#818CF8] font-bold">
+                  <CheckCircle2 className="w-4 h-4 text-[#6366F1]" />
+                  Locked in Active Track Registration
                 </div>
-
-                <div className="space-y-1">
-                  <h4 className="text-sm font-bold text-white">
-                    {student.activeRegistration.hackathonTitle}
-                  </h4>
-                  <p className="text-xs font-mono text-slate-400">
-                    Squad: {student.activeRegistration.teamName}
-                  </p>
-                </div>
-
-                <p className="text-[11px] text-slate-400 leading-relaxed">
-                  You are actively competing in this track. Additional hackathon applications are locked until this event concludes.
-                </p>
-
-                <div className="pt-2">
-                  <Link
-                    href={`/hackathons/${student.activeRegistration.hackathonSlug}`}
-                    className="inline-flex items-center gap-1.5 text-xs font-mono text-[#6366F1] hover:underline"
-                  >
-                    <span>View arena track</span>
-                    <ArrowRight className="w-3 h-3" />
-                  </Link>
+                <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-1">
+                  <div className="text-[#F8FAFC] font-bold">{student.activeRegistration.hackathonTitle}</div>
+                  <div className="text-[#94A3B8] text-[11px]">
+                    Squad: {student.activeRegistration.teamName} ({student.activeRegistration.teamId})
+                  </div>
+                  <div className="text-[#64748B] text-[10px]">
+                    Ends: {new Date(student.activeRegistration.endAt).toLocaleDateString()}
+                  </div>
                 </div>
               </div>
             ) : (
-              <div className="p-4 rounded-lg bg-emerald-500/[0.04] border border-emerald-500/20 space-y-2">
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-400" />
-                  <span className="text-xs font-semibold text-emerald-400">
-                    Eligible for Next Arena
-                  </span>
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5 text-emerald-400 font-bold">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  Eligible for Active Hackathon Registration
                 </div>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  You currently have no active lock. You can form or join a squad for any published hackathon.
+                <p className="text-[#94A3B8] text-[11px] leading-relaxed">
+                  You are currently unattached to any ongoing event. You can apply as team lead or be added by another squad lead.
                 </p>
-                <div className="pt-2">
-                  <Link
-                    href="/hackathons"
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded bg-[#6366F1] hover:bg-[#4F46E5] text-white transition-colors"
-                  >
-                    <span>Discover Arenas</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
-                </div>
               </div>
             )}
           </div>
 
-          {/* Quick Links */}
-          <div className="p-6 rounded-xl bg-white/[0.02] border border-white/[0.08] space-y-3">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500">
-              Quick Navigation
-            </span>
-            <nav className="space-y-2 text-xs font-mono">
-              <Link
-                href="/dashboard/student"
-                className="flex items-center justify-between p-2 rounded hover:bg-white/[0.04] text-slate-300 hover:text-white transition-colors"
+          {/* Theme Preference Card */}
+          <div className="bg-[#0B0E18]/55 backdrop-blur-md border border-white/[0.08] rounded-3xl p-6 space-y-4 shadow-xl">
+            <div className="space-y-1">
+              <h3 className="font-display text-sm font-bold text-[#F8FAFC]">
+                Theme Preference
+              </h3>
+              <p className="text-xs text-[#94A3B8]">
+                Choose your default interface appearance (Dark mode is default).
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 text-xs font-mono">
+              <button
+                type="button"
+                onClick={() => setTheme("dark")}
+                className={`p-3 rounded-xl border flex items-center justify-center gap-2 font-bold transition-all ${
+                  currentTheme === "dark"
+                    ? "bg-[#6366F1]/20 border-[#6366F1] text-white"
+                    : "bg-white/[0.02] border-white/[0.08] text-[#94A3B8] hover:text-[#F8FAFC]"
+                }`}
               >
-                <span>Console Dashboard</span>
-                <ArrowRight className="w-3.5 h-3.5 text-slate-500" />
-              </Link>
-              <Link
-                href="/dashboard/student/history"
-                className="flex items-center justify-between p-2 rounded hover:bg-white/[0.04] text-slate-300 hover:text-white transition-colors"
+                <Moon className="w-4 h-4 text-[#818CF8]" />
+                Dark (Default)
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setTheme("light")}
+                className={`p-3 rounded-xl border flex items-center justify-center gap-2 font-bold transition-all ${
+                  currentTheme === "light"
+                    ? "bg-[#6366F1]/20 border-[#6366F1] text-white"
+                    : "bg-white/[0.02] border-white/[0.08] text-[#94A3B8] hover:text-[#F8FAFC]"
+                }`}
               >
-                <span>Career Participation Archive</span>
-                <ArrowRight className="w-3.5 h-3.5 text-slate-500" />
-              </Link>
-              <Link
-                href="/privacy"
-                className="flex items-center justify-between p-2 rounded hover:bg-white/[0.04] text-slate-300 hover:text-white transition-colors"
-              >
-                <span>Privacy & DPDP Policy</span>
-                <ArrowRight className="w-3.5 h-3.5 text-slate-500" />
-              </Link>
-            </nav>
+                <Sun className="w-4 h-4 text-[#818CF8]" />
+                Light Mode
+              </button>
+            </div>
+          </div>
+
+          {/* Change Password Card */}
+          <div className="bg-[#0B0E18]/55 backdrop-blur-md border border-white/[0.08] rounded-3xl p-6 space-y-4 shadow-xl text-xs font-mono">
+            <div className="flex items-center gap-2">
+              <KeyRound className="w-4 h-4 text-[#818CF8]" />
+              <h3 className="font-display text-sm font-bold text-[#F8FAFC]">
+                Change Password
+              </h3>
+            </div>
+
+            {passwordSuccess && (
+              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-[11px]">
+                {passwordSuccess}
+              </div>
+            )}
+
+            {passwordError && (
+              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-[11px]">
+                {passwordError}
+              </div>
+            )}
+
+            <form onSubmit={handleChangePassword} className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-[#94A3B8] text-[11px] font-bold block">
+                  Current Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[#F8FAFC] text-xs font-mono focus:outline-none focus:border-[#6366F1]"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[#94A3B8] text-[11px] font-bold block">
+                  New Password (min 8 chars)
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[#F8FAFC] text-xs font-mono focus:outline-none focus:border-[#6366F1]"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[#94A3B8] text-[11px] font-bold block">
+                  Confirm New Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[#F8FAFC] text-xs font-mono focus:outline-none focus:border-[#6366F1]"
+                />
+              </div>
+
+              <div className="pt-1">
+                <button
+                  type="submit"
+                  disabled={savingPassword || !currentPassword || !newPassword}
+                  className="w-full py-2.5 rounded-xl bg-[#6366F1] hover:bg-[#4F46E5] text-white font-bold text-xs transition-colors disabled:opacity-40"
+                >
+                  {savingPassword ? "Updating..." : "Update Password"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       </div>

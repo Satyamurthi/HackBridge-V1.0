@@ -17,7 +17,7 @@ export async function PATCH(
     }
 
     const body = await req.json();
-    const { status } = body; // APPROVED, PAUSED, REJECTED
+    const { status, reason } = body; // APPROVED, PAUSED, REJECTED
 
     const allowedStatuses = ["APPROVED", "PAUSED", "REJECTED"];
     if (!allowedStatuses.includes(status)) {
@@ -38,7 +38,10 @@ export async function PATCH(
 
     const updated = await prisma.hostProfile.update({
       where: { id: params.hostId },
-      data: { approvalStatus: status },
+      data: { 
+        approvalStatus: status,
+        rejectionReason: status === "REJECTED" ? (reason || "Verification documentation failed institutional compliance check.") : null,
+      },
     });
 
     const actionMap: Record<string, string> = {

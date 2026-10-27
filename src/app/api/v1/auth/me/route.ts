@@ -6,7 +6,7 @@ export async function GET() {
   try {
     const session = await getSession();
     if (!session) {
-      return NextResponse.json({ user: null }, { status: 401 });
+      return NextResponse.json({ user: null }, { status: 200 });
     }
 
     // Refresh user state from database
@@ -22,7 +22,7 @@ export async function GET() {
     });
 
     if (!user) {
-      return NextResponse.json({ user: null }, { status: 401 });
+      return NextResponse.json({ user: null }, { status: 200 });
     }
 
     let hackathonId = session.hackathonId;
@@ -32,6 +32,7 @@ export async function GET() {
       hackathonId = user.studentProfile.hackathonId;
     } else if (user.role === "HOST" && user.hostProfile) {
       approvalStatus = user.hostProfile.approvalStatus;
+      hackathonId = user.hostProfile.hackId || undefined;
     } else if (user.role === "JUDGE" && user.judgeProfiles.length > 0) {
       approvalStatus = user.judgeProfiles[0].approvalStatus;
       hackathonId = user.judgeProfiles[0].hackathonId;

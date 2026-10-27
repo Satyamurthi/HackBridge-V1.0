@@ -63,9 +63,9 @@ export default function StudentSignupPage() {
   };
 
   return (
-    <div className="flex-1 flex min-h-[calc(100vh-65px)]">
+    <div className="flex-1 flex min-h-[calc(100vh-65px)] bg-transparent">
       {/* Left Brand Panel */}
-      <div className="hidden lg:flex lg:w-5/12 bg-[#06080F] border-r border-white/[0.08] p-12 flex-col justify-between relative">
+      <div className="hidden lg:flex lg:w-5/12 bg-[#0B0E18]/60 backdrop-blur-md border-r border-white/[0.08] p-12 flex-col justify-between relative">
         <div className="space-y-6">
           <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded bg-white/[0.04] border border-white/10 text-[11px] font-mono text-slate-400">
             <span className="w-1.5 h-1.5 rounded-full bg-[#6366F1]" />
@@ -100,13 +100,13 @@ export default function StudentSignupPage() {
       </div>
 
       {/* Right Form Panel */}
-      <div className="flex-1 flex items-center justify-center p-6 md:p-12 bg-[#030407]">
+      <div className="flex-1 flex items-center justify-center p-6 md:p-12 bg-transparent">
         <div className="w-full max-w-lg space-y-6">
           {generatedId ? (
             /* Minted Success Screen */
-            <div className="bg-[#0B0E18] border border-white/[0.08] p-8 rounded-2xl space-y-6 text-center">
-              <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 mx-auto flex items-center justify-center">
-                <Check className="w-6 h-6" />
+            <div className="bg-[#0B0E18]/80 backdrop-blur-md border border-white/[0.08] p-8 rounded-2xl space-y-6 text-center">
+              <div className="w-12 h-12 rounded-xl bg-[#6366F1]/20 border border-[#6366F1]/40 text-[#818CF8] mx-auto flex items-center justify-center">
+                <Check className="w-6 h-6 text-[#6366F1]" />
               </div>
 
               <div>
@@ -122,7 +122,7 @@ export default function StudentSignupPage() {
                 <div className="text-[10px] font-mono uppercase text-slate-500 tracking-wider">
                   Permanent Student ID
                 </div>
-                <div className="text-3xl font-mono font-bold text-white tracking-widest">
+                <div className="text-3xl font-mono font-bold text-[#6366F1] tracking-widest">
                   {generatedId}
                 </div>
                 <p className="text-[11px] font-mono text-slate-400">
@@ -136,7 +136,7 @@ export default function StudentSignupPage() {
                   onClick={copyId}
                   className="px-4 py-2.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] text-xs font-mono font-semibold text-white border border-white/10 flex items-center gap-2 transition-colors cursor-pointer"
                 >
-                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copied ? <Check className="w-3.5 h-3.5 text-[#6366F1]" /> : <Copy className="w-3.5 h-3.5" />}
                   {copied ? "Copied" : "Copy ID"}
                 </button>
               </div>
@@ -144,7 +144,7 @@ export default function StudentSignupPage() {
               <button
                 type="button"
                 onClick={() => router.push("/dashboard/student")}
-                className="w-full py-3 rounded-xl bg-white hover:bg-slate-200 text-black font-bold text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-2"
+                className="w-full py-3 rounded-xl bg-[#6366F1] hover:bg-[#4F46E5] text-white font-bold text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-2"
               >
                 Proceed to Student Console
                 <ArrowRight className="w-4 h-4" />
@@ -260,11 +260,11 @@ export default function StudentSignupPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3 rounded-xl bg-white hover:bg-slate-200 text-black font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-colors disabled:opacity-50 cursor-pointer"
+                  className="w-full py-3 rounded-xl bg-[#6366F1] hover:bg-[#4F46E5] text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   {loading ? (
                     <span className="flex items-center gap-2">
-                      <div className="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                       Minting Hackathon ID...
                     </span>
                   ) : (

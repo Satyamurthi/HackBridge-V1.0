@@ -78,15 +78,15 @@ async function main() {
   // 5. Create Demo Hackathon published by Approved Host
   const demoHackathon = await prisma.hackathon.upsert({
     where: { slug: "hackbridge-national-2026" },
-    update: {},
+    update: { teamMin: 2, teamMax: 4 },
     create: {
       hostId: approvedHostUser.hostProfile!.id,
       title: "HackBridge National Grand Arena 2026",
       slug: "hackbridge-national-2026",
       description: "India's premier collegiate hackathon uniting 5,000 top builders, engineers, and researchers to solve mission-critical challenges in AI, Systems, and Climate Tech.",
-      rules: "1. Teams must consist of 1 to 4 verified students.\n2. All code written must be pushed to the designated Team GitHub repository.\n3. Problem statements are revealed simultaneously at the designated countdown time.\n4. Decisions of the judging panel are final.",
+      rules: "1. Teams must consist of 2 to 4 verified students.\n2. All code written must be pushed to the designated Team GitHub repository.\n3. Problem statements are revealed simultaneously at the designated countdown time.\n4. Decisions of the judging panel are final.",
       rulesGate: true,
-      teamMin: 1,
+      teamMin: 2,
       teamMax: 4,
       fee: 299.0, // INR
       paymentMode: "QR", // Demo QR mode
@@ -219,7 +219,158 @@ async function main() {
   });
   console.log("✅ Student Member created:", studentMember.email, "Hackathon ID: HB-492019");
 
-  // 9. Initial Site Content CMS Blocks
+  // 9. Additional Test Students for Squad Formation Testing
+  const studentArjun = await prisma.user.upsert({
+    where: { email: "builder.arjun@student.edu" },
+    update: {},
+    create: {
+      email: "builder.arjun@student.edu",
+      passwordHash: defaultPassword,
+      role: "STUDENT",
+      status: "ACTIVE",
+      name: "Arjun Mehta",
+      phone: "+91 9554433221",
+      studentProfile: {
+        create: {
+          hackathonId: "HB-304918",
+          college: "BITS Pilani",
+          githubUsername: "arjun-rust",
+          bio: "Systems programmer and Rust developer.",
+          skills: "Rust, WebAssembly, Go, Distributed Systems",
+        },
+      },
+    },
+    include: { studentProfile: true },
+  });
+  console.log("✅ Test Student created: builder.arjun@student.edu, Hackathon ID: HB-304918");
+
+  const studentSneha = await prisma.user.upsert({
+    where: { email: "builder.sneha@student.edu" },
+    update: {},
+    create: {
+      email: "builder.sneha@student.edu",
+      passwordHash: defaultPassword,
+      role: "STUDENT",
+      status: "ACTIVE",
+      name: "Sneha Patel",
+      phone: "+91 9443322110",
+      studentProfile: {
+        create: {
+          hackathonId: "HB-581920",
+          college: "IIT Delhi",
+          githubUsername: "sneha-cloud",
+          bio: "Cloud infrastructure and distributed computing engineer.",
+          skills: "Kubernetes, Terraform, AWS, TypeScript",
+        },
+      },
+    },
+    include: { studentProfile: true },
+  });
+  console.log("✅ Test Student created: builder.sneha@student.edu, Hackathon ID: HB-581920");
+
+  const studentRohan = await prisma.user.upsert({
+    where: { email: "builder.rohan@student.edu" },
+    update: {},
+    create: {
+      email: "builder.rohan@student.edu",
+      passwordHash: defaultPassword,
+      role: "STUDENT",
+      status: "ACTIVE",
+      name: "Rohan Deshmukh",
+      phone: "+91 9332211009",
+      studentProfile: {
+        create: {
+          hackathonId: "HB-772910",
+          college: "NIT Trichy",
+          githubUsername: "rohan-sec",
+          bio: "Smart contract auditor and backend developer.",
+          skills: "Solidity, Node.js, PostgreSQL, Security Auditing",
+        },
+      },
+    },
+    include: { studentProfile: true },
+  });
+  console.log("✅ Test Student created: builder.rohan@student.edu, Hackathon ID: HB-772910");
+
+  // 10. Student already in another active hackathon (for Invariant Rule 1 Testing)
+  const busyStudent = await prisma.user.upsert({
+    where: { email: "busy.kabir@student.edu" },
+    update: {},
+    create: {
+      email: "busy.kabir@student.edu",
+      passwordHash: defaultPassword,
+      role: "STUDENT",
+      status: "ACTIVE",
+      name: "Kabir Sharma",
+      phone: "+91 9221100998",
+      studentProfile: {
+        create: {
+          hackathonId: "HB-999111",
+          college: "IIIT Bangalore",
+          githubUsername: "kabir-ai",
+          bio: "AI research and computer vision.",
+          skills: "PyTorch, CUDA, Python",
+        },
+      },
+    },
+    include: { studentProfile: true },
+  });
+
+  // Second active hackathon where Kabir is already registered
+  const concurrentHackathon = await prisma.hackathon.upsert({
+    where: { slug: "ai-systems-grand-prix-2026" },
+    update: {},
+    create: {
+      hostId: approvedHostUser.hostProfile!.id,
+      title: "AI Systems Grand Prix 2026",
+      slug: "ai-systems-grand-prix-2026",
+      description: "Concurrent national arena for autonomous agents.",
+      rules: "Standard fair play rules.",
+      rulesGate: false,
+      teamMin: 1,
+      teamMax: 4,
+      fee: 0,
+      paymentMode: "FREE",
+      status: "PUBLISHED",
+      startAt: new Date(Date.now() - 3600000),
+      endAt: new Date(Date.now() + 86400000 * 3),
+    },
+  });
+
+  // Create team in concurrent hackathon with Kabir as active member
+  const existingTeam = await prisma.team.findFirst({
+    where: { hackathonId: concurrentHackathon.id, name: "Autonomous Core" },
+  });
+  if (!existingTeam) {
+    const kabirTeam = await prisma.team.create({
+      data: {
+        hackathonId: concurrentHackathon.id,
+        leadStudentId: busyStudent.studentProfile!.id,
+        name: "Autonomous Core",
+        status: "ACTIVE",
+        teamId: "TEAM-KABIR1",
+      },
+    });
+    await prisma.teamMember.create({
+      data: {
+        teamId: kabirTeam.id,
+        studentId: busyStudent.studentProfile!.id,
+        role: "LEAD",
+      },
+    });
+    await prisma.payment.create({
+      data: {
+        teamId: kabirTeam.id,
+        mode: "FREE",
+        amount: 0,
+        status: "VERIFIED",
+        verifiedAt: new Date(),
+      },
+    });
+  }
+  console.log("✅ Busy Student created in concurrent hackathon: busy.kabir@student.edu, Hackathon ID: HB-999111");
+
+  // 11. Initial Site Content CMS Blocks
   await prisma.siteContent.upsert({
     where: { key: "landing_hero" },
     update: {},
