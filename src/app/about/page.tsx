@@ -285,13 +285,13 @@ export default function AboutPage() {
               className="group relative flex flex-col justify-between overflow-hidden rounded-2xl bg-[#0B0E18] border border-white/[0.08] hover:border-[#6366F1]/50 transition-all duration-300 shadow-sm hover:shadow-xl h-full"
             >
               <div>
-                {/* Photo with uniform aspect ratio */}
-                <div className="relative aspect-[4/4.5] w-full overflow-hidden bg-slate-900 flex items-center justify-center">
+                {/* Photo — square frame, face-centered */}
+                <div className="relative aspect-square w-full overflow-hidden bg-slate-900 flex items-center justify-center">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={member.image}
                     alt={member.name}
-                    className="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-105"
+                    className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#0B0E18] via-transparent to-transparent opacity-85 pointer-events-none" />
                   <div className="absolute top-3 right-3 px-2.5 py-0.5 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-[10px] font-mono text-indigo-300">
@@ -385,13 +385,13 @@ export default function AboutPage() {
               className="group relative flex flex-col justify-between overflow-hidden rounded-2xl bg-[#0B0E18] border border-white/[0.08] hover:border-amber-400/50 transition-all duration-300 shadow-sm hover:shadow-xl h-full"
             >
               <div>
-                {/* Photo with uniform square-to-portrait ratio */}
-                <div className="relative aspect-[4/4.5] w-full overflow-hidden bg-slate-900 flex items-center justify-center">
+                {/* Photo — square frame, face-centered */}
+                <div className="relative aspect-square w-full overflow-hidden bg-slate-900 flex items-center justify-center">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={coord.image}
                     alt={coord.name}
-                    className="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-105"
+                    className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#0B0E18] via-transparent to-transparent opacity-85 pointer-events-none" />
                   <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-[9px] font-mono text-amber-300">
