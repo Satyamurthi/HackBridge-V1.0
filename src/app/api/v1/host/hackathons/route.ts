@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
         domains: {
           include: {
             problemStatements: {
-              select: { id: true, title: true },
+              select: { id: true, title: true, difficulty: true, cap: true },
             },
           },
         },

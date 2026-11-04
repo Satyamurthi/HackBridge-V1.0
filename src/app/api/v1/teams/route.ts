@@ -89,18 +89,120 @@ export async function GET(req: NextRequest) {
             },
           },
         },
+        domain: true,
+        documentUploads: {
+          orderBy: { createdAt: "desc" },
+        },
+        progressUpdates: {
+          orderBy: { createdAt: "desc" },
+        },
         payment: true,
         problemStatement: {
           select: { id: true, title: true },
         },
         codeRepo: true,
-        submission: true,
+        submission: {
+          include: {
+            scores: true,
+          },
+        },
         result: true,
       },
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json({ teams });
+    const hackathonIds = Array.from(new Set(teams.map((t) => t.hackathonId)));
+
+    // Fetch submissions with scores for these hackathons to identify judge-certified standings
+    const scoredSubmissions = hackathonIds.length > 0
+      ? await prisma.submission.findMany({
+          where: {
+            team: { hackathonId: { in: hackathonIds } },
+            scores: { some: {} },
+          },
+          include: {
+            scores: true,
+            team: {
+              select: {
+                id: true,
+                hackathonId: true,
+                result: true,
+              },
+            },
+          },
+        })
+      : [];
+
+    const hackathonTopTeamIds = new Map<string, Set<string>>();
+    const hackathonsWithWinners = new Set<string>();
+
+    for (const t of teams) {
+      if (t.result) {
+        hackathonsWithWinners.add(t.hackathonId);
+      }
+    }
+
+    const subsByHackathon = new Map<string, typeof scoredSubmissions>();
+    for (const sub of scoredSubmissions) {
+      hackathonsWithWinners.add(sub.team.hackathonId);
+      const list = subsByHackathon.get(sub.team.hackathonId) || [];
+      list.push(sub);
+      subsByHackathon.set(sub.team.hackathonId, list);
+    }
+
+    for (const [hId, subs] of subsByHackathon.entries()) {
+      const ranked = subs
+        .map((s) => {
+          const certScores = s.scores.filter((sc) => !sc.isDraft);
+          const scoresToUse = certScores.length > 0 ? certScores : s.scores;
+          const total = scoresToUse.reduce(
+            (sum, sc) => sum + (Number(sc.score) || 0),
+            0
+          );
+          return {
+            teamId: s.team.id,
+            score: total,
+            publishedRank: s.team.result?.rank,
+          };
+        })
+        .sort((a, b) => {
+          if (a.publishedRank && b.publishedRank) return a.publishedRank - b.publishedRank;
+          if (a.publishedRank) return -1;
+          if (b.publishedRank) return 1;
+          return b.score - a.score;
+        });
+
+      const top3 = new Set(ranked.slice(0, 3).map((r) => r.teamId));
+      hackathonTopTeamIds.set(hId, top3);
+    }
+
+    const hackathonsWithApprovedResults = new Set(
+      (
+        await prisma.result.findMany({
+          where: { hackathonId: { in: hackathonIds } },
+          select: { hackathonId: true },
+          distinct: ["hackathonId"],
+        })
+      ).map((r) => r.hackathonId)
+    );
+
+    const enrichedTeams = teams.map((t) => {
+      const top3ForHackathon = hackathonTopTeamIds.get(t.hackathonId);
+      const isApproved = hackathonsWithApprovedResults.has(t.hackathonId);
+
+      const isWinner = isApproved && Boolean(
+        (t.result && (t.result.rank <= 3 || t.result.award)) ||
+        (top3ForHackathon && top3ForHackathon.has(t.id))
+      );
+
+      return {
+        ...t,
+        isWinner,
+        hackathonHasWinners: isApproved,
+      };
+    });
+
+    return NextResponse.json({ teams: enrichedTeams });
   } catch (error: any) {
     console.error("[Teams GET Error]:", error);
     return NextResponse.json({ error: "Failed to fetch teams" }, { status: 500 });
@@ -144,6 +246,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const rawHackathonId = body.hackathonId;
     const rawTeamName = (body.teamName || body.name || "").trim();
+    const rawDomainId: string | undefined = body.domainId || undefined;
 
     if (process.env.NODE_ENV !== "production") {
       console.log("[POST /api/v1/teams] Received request payload:", JSON.stringify(body, null, 2));
@@ -182,6 +285,26 @@ export async function POST(req: NextRequest) {
 
     if (new Date(hackathon.endAt) <= now) {
       const errorMsg = "This hackathon has already concluded.";
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("[POST /api/v1/teams] Validation failure:", errorMsg);
+      }
+      return NextResponse.json({ error: errorMsg }, { status: 400 });
+    }
+
+    // Host-declared Registration End Time Enforcement:
+    // Students can register until this declared timestamp. Once passed, registration is closed.
+    const regDeadline = hackathon.registrationDeadline ? new Date(hackathon.registrationDeadline) : null;
+    if (regDeadline && now > regDeadline) {
+      const formattedDeadline = regDeadline.toLocaleString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
+      const errorMsg = `Registration for this hackathon closed on ${formattedDeadline} IST as declared by the host. Student registrations are no longer accepted.`;
       if (process.env.NODE_ENV !== "production") {
         console.warn("[POST /api/v1/teams] Validation failure:", errorMsg);
       }
@@ -350,6 +473,8 @@ export async function POST(req: NextRequest) {
           name: rawTeamName,
           status: initialStatus,
           teamId: initialTeamId,
+          // Pre-selected domain (optional at registration; required before problem statement reveal)
+          ...(rawDomainId ? { domainId: rawDomainId } : {}),
         },
       });
 

@@ -18,8 +18,11 @@ import {
   FileCode,
   ShieldCheck,
   Building,
-  ArrowRight
+  ArrowRight,
+  Folder,
+  Lock
 } from "lucide-react";
+import { isV5Enabled } from "@/lib/version-gate";
 
 interface TeamItem {
   id: string;
@@ -83,6 +86,11 @@ export default function StudentDashboard() {
   const [activeTab, setActiveTab] = useState<"overview" | "squads" | "repos" | "profile">("overview");
 
   const [teams, setTeams] = useState<TeamItem[]>([]);
+  const [v5Active, setV5Active] = useState(false);
+
+  useEffect(() => {
+    setV5Active(isV5Enabled());
+  }, []);
 
   // Squad formation interactive state
   const [addingToTeamId, setAddingToTeamId] = useState<string | null>(null);
@@ -238,7 +246,9 @@ export default function StudentDashboard() {
     );
   }
 
-  if (!session || session.role !== "STUDENT") {
+  const isHostOrAdmin = session?.role === "HOST" || session?.role === "SUPER_ADMIN";
+
+  if (!session || (!isHostOrAdmin && session.role !== "STUDENT")) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 text-center min-h-[60vh] bg-transparent">
         <div className="w-12 h-12 rounded-xl bg-[#0B0E18]/70 border border-white/[0.08] shadow-sm flex items-center justify-center text-[#F8FAFC] mb-4">
@@ -256,11 +266,31 @@ export default function StudentDashboard() {
   const profile = session.studentProfile || {};
   const now = new Date();
   const activeRegistration = teams.find(
-    (t) => (t.status === "ACTIVE" || t.status === "PENDING") && new Date(t.hackathon.endAt) > now
+    (t) => (t.status === "ACTIVE" || t.status === "PENDING") && (t.hackathon?.endAt ? new Date(t.hackathon.endAt) > now : false)
   );
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 w-full bg-transparent relative z-10 text-[#F8FAFC]">
+      {/* Organizer / Host Inspection Mode Callout */}
+      {isHostOrAdmin && (
+        <div className="mb-6 p-4 rounded-2xl bg-[#6366F1]/10 border border-[#6366F1]/25 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#6366F1]/20 border border-[#6366F1]/30 flex items-center justify-center text-[#818CF8]">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-xs font-mono font-bold text-[#818CF8]">ORGANIZER WORKSPACE INSPECTOR ({session.role})</div>
+              <div className="text-xs text-[#94A3B8]">Viewing collegiate student squads and problem statements with administrative clearance.</div>
+            </div>
+          </div>
+          <Link
+            href={session.role === "SUPER_ADMIN" ? "/dashboard/admin" : "/dashboard/host"}
+            className="px-3.5 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-xs font-mono font-bold text-[#F8FAFC] border border-white/[0.1] self-start sm:self-auto transition-colors"
+          >
+            Return to {session.role === "SUPER_ADMIN" ? "Admin" : "Host"} Dashboard →
+          </Link>
+        </div>
+      )}
       {/* Header Breadcrumbs & Status Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 mb-8 border-b border-white/[0.08] gap-4">
         <div className="space-y-1">
@@ -444,18 +474,18 @@ export default function StudentDashboard() {
                       </thead>
                       <tbody className="divide-y divide-white/[0.06]">
                         {teams.map((t) => {
-                          const myMember = t.members.find((m) => m.student.user.email === session.email);
-                          const isLead = myMember?.role === "LEAD" || t.leadStudent.user.email === session.email;
+                          const myMember = t.members?.find((m) => m?.student?.user?.email === session?.email);
+                          const isLead = isHostOrAdmin || myMember?.role === "LEAD" || t.leadStudent?.user?.email === session?.email;
                           const isVerified = t.payment?.status === "VERIFIED" && t.teamId;
 
                           return (
                             <tr key={t.id} className="hover:bg-white/[0.02] transition-colors">
                               <td className="py-4 px-4 font-bold text-[#F8FAFC]">
                                 <Link
-                                  href={`/hackathons/${t.hackathon.slug}`}
+                                  href={`/hackathons/${t.hackathon?.slug || ""}`}
                                   className="hover:text-[#818CF8] transition-colors flex items-center gap-1.5"
                                 >
-                                  {t.hackathon.title}
+                                  {t.hackathon?.title || "Hackathon Track"}
                                   <ExternalLink className="w-3 h-3 text-[#64748B]" />
                                 </Link>
                               </td>
@@ -490,21 +520,30 @@ export default function StudentDashboard() {
                                 </span>
                               </td>
                               <td className="py-4 px-4 text-right">
-                                {!isVerified ? (
-                                  <Link
-                                    href={`/hackathons/${t.hackathon.slug}/payment/${t.id}`}
-                                    className="text-xs text-[#818CF8] hover:underline font-bold"
-                                  >
-                                    Verify Payment →
-                                  </Link>
-                                ) : (
+                                <div className="flex items-center justify-end gap-2">
+                                  {v5Active && ((t as any).isWinner || (t as any).hackathonHasWinners || (t as any).result) && (
+                                    <Link
+                                      href={`/hackathons/${t.hackathon?.slug || ""}#leaderboard`}
+                                      className="px-2.5 py-1 rounded-full text-[10px] font-bold font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 hover:bg-emerald-500/25 transition-all shadow-sm shadow-emerald-500/10"
+                                    >
+                                      <span>Winners →</span>
+                                    </Link>
+                                  )}
+                                  {!isVerified && !isHostOrAdmin && (
+                                    <Link
+                                      href={`/hackathons/${t.hackathon?.slug || ""}/payment/${t.id}`}
+                                      className="text-xs text-[#818CF8] hover:underline font-bold"
+                                    >
+                                      Verify Payment →
+                                    </Link>
+                                  )}
                                   <Link
                                     href={`/dashboard/student/arena/${t.id}`}
                                     className="px-3 py-1.5 rounded-xl bg-[#6366F1] text-white font-bold text-[10px] hover:bg-[#4F46E5] shadow-sm transition-colors inline-flex items-center gap-1"
                                   >
                                     Enter Arena →
                                   </Link>
-                                )}
+                                </div>
                               </td>
                             </tr>
                           );
@@ -544,8 +583,8 @@ export default function StudentDashboard() {
                 </div>
               ) : (
                 teams.map((team) => {
-                  const isLead = team.leadStudent.user.email === session.email;
-                  const canAdd = isLead && team.status === "PENDING" && team.members.length < team.hackathon.teamMax;
+                  const isLead = isHostOrAdmin || team.leadStudent?.user?.email === session?.email;
+                  const canAdd = isLead && team.status === "PENDING" && team.members.length < (team.hackathon?.teamMax || 4);
 
                   return (
                     <div
@@ -642,10 +681,10 @@ export default function StudentDashboard() {
               <div className="p-6 border-b border-white/[0.08] flex items-center justify-between">
                 <div>
                   <h2 className="text-base font-extrabold text-[#F8FAFC] tracking-tight">
-                    Provisioned GitHub Repositories
+                    Provisioned Squad Workspaces & Code Storage
                   </h2>
                   <p className="text-xs text-[#64748B] font-mono mt-0.5">
-                    PRD Rule 4: Automated GitHub repository titled by Team ID with live commit tracking.
+                    Dedicated local directory under each hackathon title with automatic code and document extraction.
                   </p>
                 </div>
                 <div className="text-xs font-mono text-[#94A3B8]">
@@ -714,19 +753,18 @@ export default function StudentDashboard() {
                             </div>
                           </div>
 
-                          {/* Clone Snippet */}
+                          {/* Local Folder Snippet */}
                           <div className="flex items-center justify-between p-3 rounded-xl bg-[#030407] border border-white/[0.08] text-[11px] font-mono text-[#F8FAFC] overflow-x-auto">
-                            <span className="truncate mr-2 select-all text-[#818CF8]">
-                              git clone {repoUrl}.git
+                            <span className="truncate mr-2 select-all text-emerald-400 flex items-center gap-2">
+                              <Folder className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                              <span>{t.codeRepo?.storagePath || `${t.hackathon.title}/${t.name}`}</span>
                             </span>
-                            <a
-                              href={repoUrl}
-                              target="_blank"
-                              rel="noreferrer"
+                            <Link
+                              href={`/dashboard/student/arena/${t.id}`}
                               className="text-xs text-[#818CF8] hover:underline flex items-center gap-1 shrink-0 font-bold"
                             >
-                              Open on GitHub <ExternalLink className="w-3 h-3" />
-                            </a>
+                              Open Squad Storage →
+                            </Link>
                           </div>
                         </div>
                       );

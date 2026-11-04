@@ -155,7 +155,7 @@ export async function POST(req: NextRequest) {
 
       response.cookies.set(COOKIE_NAME, token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
+        secure: false,
         sameSite: "lax",
         path: "/",
         maxAge: 7 * 24 * 60 * 60,
@@ -229,7 +229,7 @@ export async function POST(req: NextRequest) {
 
       const response = NextResponse.json({
         success: true,
-        message: "Host registration received. Account is pending super admin approval.",
+        message: "Host registration received. Waiting for admin approval. Contact 9380968402 Or Admin.",
         user: {
           id: newUser.id,
           email: newUser.email,
@@ -243,7 +243,7 @@ export async function POST(req: NextRequest) {
 
       response.cookies.set(COOKIE_NAME, token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
+        secure: false,
         sameSite: "lax",
         path: "/",
         maxAge: 7 * 24 * 60 * 60,
@@ -253,24 +253,37 @@ export async function POST(req: NextRequest) {
     }
 
     if (role === "JUDGE") {
-      if (!hackathonId) {
-        return NextResponse.json(
-          { error: "Judge registration requires a valid Hackathon ID" },
-          { status: 400 }
-        );
-      }
+      let targetHackathon = null;
+      if (hackathonId && hackathonId.trim()) {
+        targetHackathon = await prisma.hackathon.findFirst({
+          where: {
+            OR: [{ id: hackathonId.trim() }, { slug: hackathonId.trim() }],
+          },
+        });
 
-      // Verify that the hackathon exists
-      const targetHackathon = await prisma.hackathon.findFirst({
-        where: {
-          OR: [{ id: hackathonId }, { slug: hackathonId }],
-        },
-      });
+        if (!targetHackathon) {
+          return NextResponse.json(
+            { error: "Invalid Hackathon ID. No active hackathon found matching this identifier." },
+            { status: 404 }
+          );
+        }
+      } else {
+        // Fallback to latest published or active hackathon
+        targetHackathon = await prisma.hackathon.findFirst({
+          where: { status: "PUBLISHED" },
+          orderBy: { createdAt: "desc" },
+        });
+        if (!targetHackathon) {
+          targetHackathon = await prisma.hackathon.findFirst({
+            orderBy: { createdAt: "desc" },
+          });
+        }
+      }
 
       if (!targetHackathon) {
         return NextResponse.json(
-          { error: "Invalid Hackathon ID. No active hackathon found matching this identifier." },
-          { status: 404 }
+          { error: "No active hackathons found on the platform. Please specify a valid Hackathon ID." },
+          { status: 400 }
         );
       }
 
@@ -287,8 +300,9 @@ export async function POST(req: NextRequest) {
             create: {
               hackathonId: targetHackathon.id,
               approvalStatus: "PENDING",
-              designation,
-              company,
+              designation: designation || "Industry Evaluator",
+              company: company || "Independent Expert",
+              domain: body.domain || undefined,
             },
           },
         },
@@ -313,7 +327,7 @@ export async function POST(req: NextRequest) {
 
       const response = NextResponse.json({
         success: true,
-        message: "Judge registration submitted. Awaiting approval by the hackathon host.",
+        message: "Judge registration submitted. Waiting for admin approval. Contact 9380968402 Or Admin.",
         user: {
           id: newUser.id,
           email: newUser.email,
@@ -326,7 +340,7 @@ export async function POST(req: NextRequest) {
 
       response.cookies.set(COOKIE_NAME, token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
+        secure: false,
         sameSite: "lax",
         path: "/",
         maxAge: 7 * 24 * 60 * 60,

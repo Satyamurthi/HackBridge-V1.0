@@ -1,13 +1,26 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Github, Twitter, ShieldCheck } from "lucide-react";
+import { Github, Twitter, ShieldCheck, Mail, Phone, Globe } from "lucide-react";
+import { DEFAULT_FOOTER_CONFIG, FooterConfig } from "@/lib/navigation-defaults";
 
 export default function Footer() {
   const pathname = usePathname();
   const isDashboard = pathname.startsWith("/dashboard");
+  const [footerConfig, setFooterConfig] = useState<FooterConfig>(DEFAULT_FOOTER_CONFIG);
+
+  useEffect(() => {
+    fetch("/api/v1/content/navigation")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.footer) {
+          setFooterConfig(data.footer);
+        }
+      })
+      .catch(() => {});
+  }, [pathname]);
 
   // Slim minimal footer inside dashboards
   if (isDashboard) {
@@ -16,9 +29,7 @@ export default function Footer() {
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2.5">
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-[#6366F1] animate-pulse" />
-            <span className="text-[#94A3B8] font-medium">HackBridge Protocol Operational</span>
-            <span>·</span>
-            <span>v1.0.4 Production</span>
+            <span className="text-[#94A3B8] font-medium">{footerConfig.statusText || "HackBridge Protocol Operational"}</span>
           </div>
           <div className="flex items-center gap-4 text-[#94A3B8]">
             <Link href="/terms" className="hover:text-[#F8FAFC] transition-colors">
@@ -30,7 +41,12 @@ export default function Footer() {
             <Link href="/api/v1/health" target="_blank" className="hover:text-[#F8FAFC] transition-colors">
               Health
             </Link>
-            <span className="text-[#64748B]">© 2026 HackBridge</span>
+            {footerConfig.contactPhone && (
+              <span className="text-[#64748B] flex items-center gap-1">
+                <Phone className="w-3 h-3" /> {footerConfig.contactPhone}
+              </span>
+            )}
+            <span className="text-[#64748B]">{footerConfig.copyrightText || "© 2026 HackBridge"}</span>
           </div>
         </div>
       </footer>
@@ -38,146 +54,99 @@ export default function Footer() {
   }
 
   // Full marketing footer on public and non-dashboard pages
+  const columns = footerConfig.columns && footerConfig.columns.length > 0
+    ? footerConfig.columns
+    : DEFAULT_FOOTER_CONFIG.columns;
+
+  const socialLinks = footerConfig.socialLinks && footerConfig.socialLinks.length > 0
+    ? footerConfig.socialLinks
+    : DEFAULT_FOOTER_CONFIG.socialLinks;
+
   return (
     <footer className="w-full bg-[#030407]/40 backdrop-blur-sm border-t border-white/[0.08] mt-24 pt-16 pb-12 px-4 md:px-8 relative z-10">
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-5 gap-10 lg:gap-12">
         {/* Brand & Status Column */}
         <div className="md:col-span-2 space-y-4">
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-6 h-6 rounded-lg bg-[#6366F1] text-white flex items-center justify-center font-bold text-xs tracking-tighter shadow-sm group-hover:scale-105 transition-transform">
-              HB
-            </div>
+          <Link href="/" className="flex items-center gap-2.5 group">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/brand/hackbridge-mark.png"
+              alt={footerConfig.brandName || "HackBridge"}
+              className="h-7 w-auto max-h-7 object-contain group-hover:scale-105 transition-transform drop-shadow-sm"
+            />
             <span className="font-display font-bold text-base tracking-tight text-[#F8FAFC]">
-              HackBridge
+              {footerConfig.brandName || "HackBridge"}
             </span>
           </Link>
           <p className="text-xs text-[#94A3B8] max-w-sm leading-relaxed">
-            The collegiate engineering infrastructure for high-stakes competitive hackathons. Permanent credentials, atomic problem statement reveals, and automated GitHub repository synchronization.
+            {footerConfig.brandDescription || DEFAULT_FOOTER_CONFIG.brandDescription}
           </p>
 
           <div className="pt-2 flex items-center gap-2 text-xs font-mono text-[#94A3B8]">
             <span className="w-2 h-2 rounded-full bg-[#6366F1] animate-pulse" />
-            <span className="font-medium text-[#F8FAFC]">Core Protocol Operational</span>
-            <span className="text-[#64748B]">·</span>
-            <span className="text-[#64748B]">v1.0.4 Production</span>
+            <span className="font-medium text-[#F8FAFC]">{footerConfig.statusText || DEFAULT_FOOTER_CONFIG.statusText}</span>
           </div>
+
+          {(footerConfig.contactPhone || footerConfig.contactEmail) && (
+            <div className="pt-2 text-[11px] font-mono text-[#94A3B8] space-y-1">
+              {footerConfig.contactPhone && (
+                <div className="flex items-center gap-1.5">
+                  <Phone className="w-3 h-3 text-[#6366F1]" />
+                  <span>Direct: {footerConfig.contactPhone}</span>
+                </div>
+              )}
+              {footerConfig.contactEmail && (
+                <div className="flex items-center gap-1.5">
+                  <Mail className="w-3 h-3 text-[#6366F1]" />
+                  <span>Support: {footerConfig.contactEmail}</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Competitor Links */}
-        <div className="space-y-3">
-          <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-[#F8FAFC]">
-            Platform
-          </h4>
-          <ul className="space-y-2 text-xs text-[#94A3B8]">
-            <li>
-              <Link href="/hackathons" className="hover:text-[#6366F1] transition-colors">
-                Active Arenas
-              </Link>
-            </li>
-            <li>
-              <Link href="/signup/student" className="hover:text-[#6366F1] transition-colors">
-                Claim Hackathon ID
-              </Link>
-            </li>
-            <li>
-              <Link href="/docs" className="hover:text-[#6366F1] transition-colors">
-                Allocation Algorithm
-              </Link>
-            </li>
-            <li>
-              <Link href="/developers" className="hover:text-[#6366F1] transition-colors">
-                GitHub Repo Storage
-              </Link>
-            </li>
-          </ul>
-        </div>
-
-        {/* Organizer & Judge Links */}
-        <div className="space-y-3">
-          <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-[#F8FAFC]">
-            Organizers
-          </h4>
-          <ul className="space-y-2 text-xs text-[#94A3B8]">
-            <li>
-              <Link href="/register/college" className="hover:text-[#6366F1] transition-colors">
-                Host Collegiate Track
-              </Link>
-            </li>
-            <li>
-              <Link href="/register/company" className="hover:text-[#6366F1] transition-colors">
-                Host Corporate Track
-              </Link>
-            </li>
-            <li>
-              <Link href="/signup/judge" className="hover:text-[#6366F1] transition-colors">
-                Judge Registration
-              </Link>
-            </li>
-            <li>
-              <Link href="/docs#scoring" className="hover:text-[#6366F1] transition-colors">
-                Weighted Rubric Guide
-              </Link>
-            </li>
-            <li>
-              <Link href="/about" className="hover:text-[#6366F1] transition-colors">
-                Campus Partners
-              </Link>
-            </li>
-          </ul>
-        </div>
-
-        {/* Governance & Compliance */}
-        <div className="space-y-3">
-          <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-[#F8FAFC]">
-            Governance
-          </h4>
-          <ul className="space-y-2 text-xs text-[#94A3B8]">
-            <li>
-              <Link href="/terms" className="hover:text-[#6366F1] transition-colors">
-                Terms of Protocol
-              </Link>
-            </li>
-            <li>
-              <Link href="/privacy" className="hover:text-[#6366F1] transition-colors">
-                Privacy Policy
-              </Link>
-            </li>
-            <li>
-              <Link href="/dashboard/student/profile" className="hover:text-[#6366F1] transition-colors">
-                DPDP Data Export
-              </Link>
-            </li>
-            <li>
-              <Link href="/api/v1/health" target="_blank" className="hover:text-[#6366F1] transition-colors">
-                System Health Check
-              </Link>
-            </li>
-          </ul>
-        </div>
+        {/* Dynamic Nav Columns */}
+        {columns.map((col, idx) => (
+          <div key={col.title + idx} className="space-y-3">
+            <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-[#F8FAFC]">
+              {col.title}
+            </h4>
+            <ul className="space-y-2 text-xs text-[#94A3B8]">
+              {col.links.map((link) => (
+                <li key={link.label}>
+                  <Link href={link.href} className="hover:text-[#6366F1] transition-colors">
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
       </div>
 
       <div className="max-w-7xl mx-auto mt-12 pt-6 border-t border-white/[0.08] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-mono text-[#64748B]">
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-[#6366F1]" />
-          <span>Institutional Integrity Secured · Strict Anti-AI-Tells Design System</span>
+          <span>{footerConfig.bottomNotice || DEFAULT_FOOTER_CONFIG.bottomNotice}</span>
         </div>
         <div className="flex items-center gap-4">
-          <a
-            href="https://github.com"
-            target="_blank"
-            rel="noreferrer"
-            className="hover:text-[#F8FAFC] transition-colors"
-          >
-            <Github className="w-4 h-4" />
-          </a>
-          <a
-            href="https://twitter.com"
-            target="_blank"
-            rel="noreferrer"
-            className="hover:text-[#F8FAFC] transition-colors"
-          >
-            <Twitter className="w-4 h-4" />
-          </a>
+          <span className="text-[11px] text-[#64748B]">{footerConfig.copyrightText || DEFAULT_FOOTER_CONFIG.copyrightText}</span>
+          {socialLinks.map((s, idx) => {
+            const isGithub = s.platform.toLowerCase().includes("github");
+            const isTwitter = s.platform.toLowerCase().includes("twitter") || s.platform.toLowerCase().includes("x");
+            return (
+              <a
+                key={s.platform + idx}
+                href={s.url}
+                target="_blank"
+                rel="noreferrer"
+                className="hover:text-[#F8FAFC] transition-colors p-1"
+                title={s.platform}
+              >
+                {isGithub ? <Github className="w-4 h-4" /> : isTwitter ? <Twitter className="w-4 h-4" /> : <Globe className="w-4 h-4" />}
+              </a>
+            );
+          })}
         </div>
       </div>
     </footer>

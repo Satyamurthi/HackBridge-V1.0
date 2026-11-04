@@ -37,6 +37,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
+    if (!user.passwordHash) {
+      return NextResponse.json(
+        { error: "OAuth accounts signed in with Google do not use a password." },
+        { status: 400 }
+      );
+    }
+
     const isValid = await verifyPassword(currentPassword, user.passwordHash);
     if (!isValid) {
       return NextResponse.json(

@@ -12,13 +12,13 @@ export async function POST(
 ) {
   try {
     const session = await getSession();
-    if (!session || session.role !== "STUDENT") {
+    if (!session || (session.role !== "STUDENT" && session.role !== "HOST" && session.role !== "SUPER_ADMIN")) {
       return NextResponse.json({ error: "Student authentication required" }, { status: 401 });
     }
 
     const { teamId } = params;
     const body = await req.json();
-    const { problemStatementId } = body;
+    const { problemStatementId, allowSwitch } = body;
 
     if (!problemStatementId) {
       return NextResponse.json({ error: "problemStatementId is required" }, { status: 400 });
@@ -31,6 +31,7 @@ export async function POST(
       },
       include: {
         leadStudent: true,
+        domain: true,
         hackathon: {
           include: {
             domains: {
@@ -45,9 +46,16 @@ export async function POST(
       return NextResponse.json({ error: "Team not found" }, { status: 404 });
     }
 
-    if (team.leadStudent.userId !== session.userId) {
+    const isHostOrAdmin = session.role === "HOST" || session.role === "SUPER_ADMIN";
+    const isLead =
+      isHostOrAdmin ||
+      team.leadStudent?.userId === session.userId ||
+      team.leadStudentId === session.profileId ||
+      team.leadStudentId === session.userId;
+
+    if (!isLead) {
       return NextResponse.json(
-        { error: "Only the designated team lead can select a problem statement" },
+        { error: "Only the Team Leader is authorized to submit the problem statement selection for the team. Team members have read-only access." },
         { status: 403 }
       );
     }
@@ -59,7 +67,8 @@ export async function POST(
       );
     }
 
-    if (team.problemStatementId) {
+    // Block second choice unless explicitly switching
+    if (team.problemStatementId && team.problemStatementId !== problemStatementId && !allowSwitch) {
       return NextResponse.json(
         { error: "A problem statement has already been selected. Selection is final." },
         { status: 400 }
@@ -77,6 +86,39 @@ export async function POST(
     if (!statement || statement.domain.hackathonId !== team.hackathonId) {
       return NextResponse.json(
         { error: "Invalid problem statement for this hackathon track" },
+        { status: 400 }
+      );
+    }
+
+    // If this statement is already selected, return it immediately
+    if (team.problemStatementId === problemStatementId) {
+      return NextResponse.json({
+        success: true,
+        team,
+        statement: {
+          id: statement.id,
+          title: statement.title,
+          description: statement.description,
+          domain: statement.domain.name,
+          code: (statement as any).code || null,
+          overview: (statement as any).overview || null,
+          mission: (statement as any).mission || null,
+          resources: (statement as any).resources || null,
+          metrics: (statement as any).metrics || null,
+          goals: (statement as any).goals || null,
+          safetyRules: (statement as any).safetyRules || null,
+          evalBoundary: (statement as any).evalBoundary || null,
+        },
+        message: `Problem statement "${statement.title}" is confirmed for your squad.`,
+      });
+    }
+
+    // Enforce domain selection matching: team can only select problem statement in its chosen domain
+    if (team.domainId && statement.domainId !== team.domainId) {
+      return NextResponse.json(
+        {
+          error: `This problem statement belongs to domain "${statement.domain.name}", but your squad is competing in "${team.domain?.name || 'another domain'}". Squads may only select problem statements within their registered domain.`,
+        },
         { status: 400 }
       );
     }
@@ -115,16 +157,17 @@ export async function POST(
 
     // Execute atomic selection inside transaction
     const result = await prisma.$transaction(async (tx) => {
-      // Re-count teams assigned to this statement inside transaction
+      // Re-count teams assigned to this statement inside transaction (excluding current team)
       const currentAssignedCount = await tx.team.count({
         where: {
           problemStatementId,
+          id: { not: team.id },
         },
       });
 
       if (currentAssignedCount >= effectiveCap) {
         throw new Error(
-          `SLOT_CAP_REACHED: Problem statement "${statement.title}" has reached its balanced allocation cap of ${effectiveCap} teams. Please select an available statement.`
+          `SLOT_CAP_REACHED: Slots full. Problem statement "${statement.title}" has reached its limit of ${effectiveCap} teams.`
         );
       }
 
@@ -133,17 +176,18 @@ export async function POST(
         where: { id: team.id },
         data: {
           problemStatementId,
+          domainId: team.domainId || statement.domainId,
         },
       });
 
-      // Auto-provision Code Repository record if not already present
+      const orgName = process.env.GITHUB_ORG_NAME || "hackbridge-dev";
       const repoName = `hackbridge-${team.teamId}`;
       await tx.codeRepo.upsert({
         where: { teamId: team.id },
         update: {},
         create: {
           teamId: team.id,
-          githubRepoUrl: `https://github.com/hackbridge-org/${repoName}`,
+          githubRepoUrl: `https://github.com/${orgName}/${repoName}`,
           storagePath: `/repos/${team.teamId}`,
         },
       });
@@ -166,13 +210,21 @@ export async function POST(
         title: statement.title,
         description: statement.description,
         domain: statement.domain.name,
+        code: (statement as any).code || null,
+        overview: (statement as any).overview || null,
+        mission: (statement as any).mission || null,
+        resources: (statement as any).resources || null,
+        metrics: (statement as any).metrics || null,
+        goals: (statement as any).goals || null,
+        safetyRules: (statement as any).safetyRules || null,
+        evalBoundary: (statement as any).evalBoundary || null,
       },
       message: `Problem statement "${statement.title}" selected successfully! Repository provisioned.`,
     });
   } catch (error: any) {
     console.error("[Select Statement Error]:", error);
     if (error.message?.startsWith("SLOT_CAP_REACHED")) {
-      return NextResponse.json({ error: error.message }, { status: 409 });
+      return NextResponse.json({ error: "Slots full. Problem statement selection limit reached." }, { status: 409 });
     }
     return NextResponse.json(
       { error: "Failed to select problem statement" },

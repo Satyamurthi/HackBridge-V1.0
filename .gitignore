@@ -12,9 +12,12 @@
 # Next.js build output
 /.next/
 /out/
+releases/**/.next/
+releases/**/node_modules/
 
 # Production
 /build
+releases/
 
 # Debug logs
 npm-debug.log*
@@ -43,3 +46,21 @@ next-env.d.ts
 .agents
 .gemini
 scratch/
+
+# External sprint folders & non-Hackbridge assets
+/Frontier AI*
+/HACKMITTEN*
+/HackBridge National*
+/HackMitten*
+/Hackathon v4.0*
+/National Tech*
+/Simulation Hackathon*
+/LOGO*
+*.xlsx
+*.csv
+/bin/
+.backups/
+*.pdf
+*.docx
+Hackmitten 3.0 PS/
+prisma/*.bak*

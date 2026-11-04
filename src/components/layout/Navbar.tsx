@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { 
   Copy, 
   Check, 
@@ -24,56 +24,15 @@ interface UserSession {
   status: string;
 }
 
-interface NavLinkItem {
-  label: string;
-  href: string;
-}
-
-const PUBLIC_NAV: NavLinkItem[] = [
-  { label: "Arenas", href: "/hackathons" },
-  { label: "Host a Hackathon", href: "/register/college" },
-  { label: "Protocol Specs", href: "/docs" },
-  { label: "API & GitHub Sync", href: "/developers" },
-  { label: "About", href: "/about" },
-];
-
-const STUDENT_NAV: NavLinkItem[] = [
-  { label: "Dashboard", href: "/dashboard/student" },
-  { label: "My Teams", href: "/dashboard/student/teams" },
-  { label: "My Hackathons", href: "/dashboard/student/hackathons" },
-  { label: "Payments", href: "/dashboard/student/payments" },
-  { label: "Notifications", href: "/dashboard/student/notifications" },
-  { label: "Profile", href: "/dashboard/student/profile" },
-];
-
-const HOST_NAV: NavLinkItem[] = [
-  { label: "Dashboard", href: "/dashboard/host" },
-  { label: "Hackathons", href: "/dashboard/host?tab=hackathons" },
-  { label: "Create Track", href: "/dashboard/host/create" },
-  { label: "Payments", href: "/dashboard/host/payments" },
-  { label: "Judges", href: "/dashboard/host?tab=judges" },
-  { label: "Live Arena", href: "/dashboard/host/arena" },
-  { label: "Profile", href: "/dashboard/host?tab=profile" },
-];
-
-const JUDGE_NAV: NavLinkItem[] = [
-  { label: "Dashboard", href: "/dashboard/judge" },
-  { label: "Review Queue", href: "/dashboard/judge?tab=queue" },
-  { label: "Rubric", href: "/dashboard/judge?tab=rubric" },
-  { label: "Profile", href: "/dashboard/judge?tab=profile" },
-];
-
-const ADMIN_NAV: NavLinkItem[] = [
-  { label: "Dashboard", href: "/dashboard/admin" },
-  { label: "Host Approvals", href: "/dashboard/admin?tab=hosts" },
-  { label: "Audit Stream", href: "/dashboard/admin?tab=audit" },
-  { label: "Site CMS", href: "/dashboard/admin?tab=cms" },
-  { label: "Platform Rules", href: "/dashboard/admin?tab=settings" },
-  { label: "Profile", href: "/dashboard/admin?tab=profile" },
-];
+import { 
+  DEFAULT_NAVBAR_CONFIG, 
+  NavbarConfig, 
+  NavLinkItem 
+} from "@/lib/navigation-defaults";
 
 export default function Navbar() {
   const [session, setSession] = useState<UserSession | null>(null);
+  const [navConfig, setNavConfig] = useState<NavbarConfig>(DEFAULT_NAVBAR_CONFIG);
   const [copied, setCopied] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [registerMenuOpen, setRegisterMenuOpen] = useState(false);
@@ -81,6 +40,18 @@ export default function Navbar() {
   const [isLightMode, setIsLightMode] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+
+  // Load custom navigation config
+  useEffect(() => {
+    fetch("/api/v1/content/navigation")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.navbar) {
+          setNavConfig(data.navbar);
+        }
+      })
+      .catch(() => {});
+  }, [pathname]);
 
   // Scroll blur & background
   useEffect(() => {
@@ -95,22 +66,34 @@ export default function Navbar() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("hb_theme");
-      setIsLightMode(stored === "light");
+      const isLight = stored === "light";
+      setIsLightMode(isLight);
+      if (isLight) {
+        document.documentElement.classList.remove("dark");
+        document.documentElement.classList.add("light");
+        document.documentElement.style.colorScheme = "light";
+      } else {
+        document.documentElement.classList.add("dark");
+        document.documentElement.classList.remove("light");
+        document.documentElement.style.colorScheme = "dark";
+      }
     }
   }, []);
 
   const toggleTheme = () => {
     if (typeof window === "undefined") return;
-    if (isLightMode) {
-      document.documentElement.classList.add("dark");
-      document.documentElement.classList.remove("light");
-      localStorage.setItem("hb_theme", "dark");
-      setIsLightMode(false);
-    } else {
+    const nextMode = !isLightMode;
+    setIsLightMode(nextMode);
+    if (nextMode) {
       document.documentElement.classList.remove("dark");
       document.documentElement.classList.add("light");
+      document.documentElement.style.colorScheme = "light";
       localStorage.setItem("hb_theme", "light");
-      setIsLightMode(true);
+    } else {
+      document.documentElement.classList.add("dark");
+      document.documentElement.classList.remove("light");
+      document.documentElement.style.colorScheme = "dark";
+      localStorage.setItem("hb_theme", "dark");
     }
   };
 
@@ -145,18 +128,27 @@ export default function Navbar() {
   };
 
   const getRoleNavItems = (): NavLinkItem[] => {
-    if (!session) return PUBLIC_NAV;
+    if (!session) {
+      const links = [...(navConfig.publicNavLinks || DEFAULT_NAVBAR_CONFIG.publicNavLinks)];
+      if (!links.some((l) => l.href === "/" || l.label.toLowerCase() === "home")) {
+        links.unshift({ label: "Home", href: "/" });
+      }
+      if (!links.some((l) => l.href === "/about" || l.label.toLowerCase() === "about")) {
+        links.push({ label: "About", href: "/about" });
+      }
+      return links;
+    }
     switch (session.role) {
       case "STUDENT":
-        return STUDENT_NAV;
+        return navConfig.studentNavLinks || DEFAULT_NAVBAR_CONFIG.studentNavLinks;
       case "HOST":
-        return HOST_NAV;
+        return navConfig.hostNavLinks || DEFAULT_NAVBAR_CONFIG.hostNavLinks;
       case "JUDGE":
-        return JUDGE_NAV;
+        return navConfig.judgeNavLinks || DEFAULT_NAVBAR_CONFIG.judgeNavLinks;
       case "SUPER_ADMIN":
-        return ADMIN_NAV;
+        return navConfig.adminNavLinks || DEFAULT_NAVBAR_CONFIG.adminNavLinks;
       default:
-        return PUBLIC_NAV;
+        return navConfig.publicNavLinks || DEFAULT_NAVBAR_CONFIG.publicNavLinks;
     }
   };
 
@@ -177,49 +169,71 @@ export default function Navbar() {
   };
 
   return (
-    <header
-      className={`sticky top-0 z-50 w-full transition-all duration-200 border-b ${
-        scrolled
-          ? "bg-[#030407]/85 backdrop-blur-md border-white/[0.08] shadow-lg py-2.5"
-          : "bg-[#030407]/65 backdrop-blur-sm border-white/[0.06] py-3.5"
-      }`}
-    >
-      <div className="max-w-7xl mx-auto px-4 md:px-8 flex items-center justify-between gap-4">
-        {/* Brand Monogram */}
-        <Link 
-          href={session ? getDashboardHref(session.role) : "/"} 
-          className="flex items-center gap-2.5 group shrink-0"
+    <>
+      {/* Optional Top Announcement Bar (hidden on admin governance dashboard per requirement) */}
+      {navConfig.announcement?.enabled && navConfig.announcement?.text && !pathname.startsWith("/dashboard/admin") && (
+        <aside 
+          aria-label="Platform Announcement"
+          className="w-full bg-[#6366F1] text-white text-[11px] font-mono py-1.5 px-4 text-center tracking-wide flex items-center justify-center gap-2 z-50 relative"
         >
-          <div className="w-7 h-7 rounded-lg bg-[#6366F1] text-white flex items-center justify-center font-bold text-xs tracking-tighter shadow-sm group-hover:scale-105 transition-transform">
-            HB
-          </div>
-          <span className="font-display font-bold text-base tracking-tight text-[#F8FAFC] flex items-center gap-1.5">
-            HackBridge
-            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#6366F1]/15 border border-[#6366F1]/30 text-[#818CF8] font-semibold">
-              v1.0
+          <span>{navConfig.announcement.text}</span>
+          {navConfig.announcement.link && (
+            <Link href={navConfig.announcement.link} className="underline font-bold hover:text-white/80 ml-1">
+              Explore →
+            </Link>
+          )}
+        </aside>
+      )}
+
+      <header
+        className={`sticky top-0 z-50 w-full transition-all duration-200 border-b ${
+          scrolled
+            ? "bg-[#030407]/85 backdrop-blur-md border-white/[0.08] shadow-lg py-2.5"
+            : "bg-[#030407]/65 backdrop-blur-sm border-white/[0.06] py-3.5"
+        }`}
+      >
+        <div className="max-w-7xl mx-auto px-4 md:px-8 flex items-center justify-between gap-4">
+          {/* Brand Logo */}
+          <Link 
+            href={session ? getDashboardHref(session.role) : "/"} 
+            className="flex items-center gap-2.5 group shrink-0"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={navConfig.brandLogoUrl || "/brand/hackbridge-mark.png"}
+              alt={navConfig.brandName || "HackBridge"}
+              className="h-8 w-auto max-h-8 object-contain transition-transform group-hover:scale-105 drop-shadow-sm"
+            />
+            <span className="font-display font-bold text-base tracking-tight text-[#F8FAFC] flex items-center gap-1.5">
+              {navConfig.brandName || "HackBridge"}
+              {navConfig.versionTag && (
+                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#6366F1]/15 border border-[#6366F1]/30 text-[#818CF8] font-semibold">
+                  {navConfig.versionTag}
+                </span>
+              )}
             </span>
-          </span>
-        </Link>
+          </Link>
 
         {/* Center Navigation Bar */}
         {/* If logged in: Role-based App Bar (Dashboard, Teams, Hackathons, Payments, etc.) */}
         {/* If logged out: Public Links (Arenas, Protocol Specs, API & GitHub Sync, About) */}
-        <nav className="hidden md:flex items-center gap-5 lg:gap-6 text-xs font-medium text-[#94A3B8] overflow-x-auto py-1">
-          {activeNavItems.map((item) => {
-            const isActive = pathname === item.href.split("?")[0];
-            return (
-              <Link
-                key={item.label}
-                href={item.href}
-                className={`transition-colors whitespace-nowrap hover:text-[#818CF8] ${
-                  isActive ? "text-[#818CF8] font-bold" : ""
-                }`}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
+        <Suspense
+          fallback={
+            <nav className="hidden md:flex items-center gap-5 lg:gap-6 text-xs font-medium text-[#94A3B8] overflow-x-auto py-1">
+              {activeNavItems.map((item) => (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  className="transition-colors whitespace-nowrap hover:text-[#818CF8]"
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
+          }
+        >
+          <NavLinksBar items={activeNavItems} pathname={pathname} />
+        </Suspense>
 
         {/* Right Action / Auth Area */}
         <div className="hidden md:flex items-center gap-2.5 shrink-0">
@@ -278,14 +292,23 @@ export default function Navbar() {
                 Sign In
               </Link>
 
-              {/* Interactive Register Dropdown Menu */}
-              <div className="relative">
-                <button
-                  onClick={() => setRegisterMenuOpen(!registerMenuOpen)}
-                  onBlur={() => setTimeout(() => setRegisterMenuOpen(false), 200)}
+              {/* Interactive Register Button & Track Options */}
+              <div className="relative flex items-center">
+                <Link
+                  href="/signup/student"
                   className="px-3.5 py-1.5 text-xs font-bold rounded-lg bg-[#6366F1] text-white hover:bg-[#4F46E5] transition-all flex items-center gap-1 shadow-sm"
                 >
                   Register
+                </Link>
+                <button
+                  type="button"
+                  aria-label="More registration options"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setRegisterMenuOpen(!registerMenuOpen);
+                  }}
+                  className="p-1 text-white/80 hover:text-white transition-colors ml-0.5"
+                >
                   <ChevronRight className={`w-3.5 h-3.5 transition-transform ${registerMenuOpen ? "rotate-90" : ""}`} />
                 </button>
 
@@ -381,18 +404,28 @@ export default function Navbar() {
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
         <div className="md:hidden border-t border-white/[0.08] bg-[#030407]/95 backdrop-blur-md px-4 py-4 space-y-3">
-          <div className="space-y-1">
-            {activeNavItems.map((item) => (
-              <Link
-                key={item.label}
-                href={item.href}
-                onClick={() => setMobileMenuOpen(false)}
-                className="block text-xs font-medium text-[#F8FAFC] hover:text-[#818CF8] py-1.5"
-              >
-                {item.label}
-              </Link>
-            ))}
-          </div>
+          <Suspense
+            fallback={
+              <div className="space-y-1">
+                {activeNavItems.map((item) => (
+                  <Link
+                    key={item.label}
+                    href={item.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block text-xs font-medium text-[#F8FAFC] py-1.5"
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
+            }
+          >
+            <MobileNavLinksBar
+              items={activeNavItems}
+              pathname={pathname}
+              onNavigate={() => setMobileMenuOpen(false)}
+            />
+          </Suspense>
 
           {session ? (
             <div className="pt-3 border-t border-white/[0.08] flex items-center justify-between">
@@ -453,6 +486,100 @@ export default function Navbar() {
           )}
         </div>
       )}
-    </header>
+      </header>
+    </>
+  );
+}
+
+function NavLinksBar({
+  items,
+  pathname,
+}: {
+  items: NavLinkItem[];
+  pathname: string;
+}) {
+  const searchParams = useSearchParams();
+  const currentTab = searchParams.get("tab");
+
+  const getDefaultTab = (path: string) => {
+    if (path.startsWith("/dashboard/admin")) return "users";
+    return null;
+  };
+
+  const defaultTab = getDefaultTab(pathname);
+
+  return (
+    <nav className="hidden md:flex items-center gap-5 lg:gap-6 text-xs font-medium text-[#94A3B8] overflow-x-auto py-1">
+      {items.map((item) => {
+        const [itemPath, itemQuery] = item.href.split("?");
+        const itemTab = itemQuery ? new URLSearchParams(itemQuery).get("tab") : null;
+        let isActive = false;
+        if (itemTab) {
+          isActive = pathname === itemPath && (currentTab || defaultTab) === itemTab;
+        } else {
+          isActive = pathname === itemPath && !currentTab;
+        }
+
+        return (
+          <Link
+            key={item.label}
+            href={item.href}
+            className={`transition-colors whitespace-nowrap hover:text-[#818CF8] ${
+              isActive ? "text-[#818CF8] font-bold" : ""
+            }`}
+          >
+            {item.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+function MobileNavLinksBar({
+  items,
+  pathname,
+  onNavigate,
+}: {
+  items: NavLinkItem[];
+  pathname: string;
+  onNavigate: () => void;
+}) {
+  const searchParams = useSearchParams();
+  const currentTab = searchParams.get("tab");
+
+  const getDefaultTab = (path: string) => {
+    if (path.startsWith("/dashboard/admin")) return "users";
+    return null;
+  };
+
+  const defaultTab = getDefaultTab(pathname);
+
+  return (
+    <div className="space-y-1">
+      {items.map((item) => {
+        const [itemPath, itemQuery] = item.href.split("?");
+        const itemTab = itemQuery ? new URLSearchParams(itemQuery).get("tab") : null;
+        let isActive = false;
+        if (itemTab) {
+          isActive = pathname === itemPath && (currentTab || defaultTab) === itemTab;
+        } else {
+          isActive = pathname === itemPath && !currentTab;
+        }
+
+        return (
+          <Link
+            key={item.label}
+            href={item.href}
+            onClick={onNavigate}
+            className={`block text-xs font-medium py-1.5 transition-colors ${
+              isActive ? "text-[#818CF8] font-bold" : "text-[#F8FAFC] hover:text-[#818CF8]"
+            }`}
+          >
+            {item.label}
+          </Link>
+        );
+      })}
+    </div>
   );
 }

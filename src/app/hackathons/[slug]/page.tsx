@@ -22,6 +22,8 @@ import {
   FileText,
   ShieldCheck
 } from "lucide-react";
+import HackathonLeaderboardCard from "@/components/hackathons/HackathonLeaderboardCard";
+import { isV5Enabled } from "@/lib/version-gate";
 
 interface HackathonDetail {
   id: string;
@@ -36,6 +38,7 @@ interface HackathonDetail {
   fee: number;
   paymentMode: string;
   bannerUrl?: string;
+  registrationDeadline?: string;
   startAt: string;
   endAt: string;
   status: string;
@@ -46,7 +49,15 @@ interface HackathonDetail {
     description?: string;
     revealAt: string;
     revealed: boolean;
-    problemStatements: Array<{ id: string; title: string; cap: number }>;
+    problemStatements: Array<{
+      id: string;
+      title: string;
+      cap: number;
+      code?: string;
+      overview?: string;
+      mission?: string;
+      description?: string;
+    }>;
   }>;
   rubricCriteria: Array<{ id: string; name: string; weight: number; maxScore: number }>;
   _count?: { teams: number; judges: number };
@@ -98,6 +109,11 @@ export default function HackathonDetailPage() {
   const [rulesAccepted, setRulesAccepted] = useState(false);
   const [showRulesModal, setShowRulesModal] = useState(false);
   const [showRulesAccordion, setShowRulesAccordion] = useState(true);
+  const [v5Active, setV5Active] = useState(false);
+
+  useEffect(() => {
+    setV5Active(isV5Enabled());
+  }, []);
 
   useEffect(() => {
     fetch(`/api/v1/hackathons/${slug}`)
@@ -141,9 +157,11 @@ export default function HackathonDetailPage() {
   const now = new Date();
   const startAt = new Date(hackathon.startAt);
   const endAt = new Date(hackathon.endAt);
+  const regDeadline = hackathon.registrationDeadline ? new Date(hackathon.registrationDeadline) : startAt;
   const isLive = now >= startAt && now <= endAt;
   const isUpcoming = now < startAt;
   const isEnded = now > endAt;
+  const isRegClosed = now >= regDeadline;
 
   const feeLabel =
     hackathon.paymentMode === "FREE" || hackathon.fee === 0
@@ -153,10 +171,12 @@ export default function HackathonDetailPage() {
   const statusBadge = isLive
     ? { label: "LIVE NOW", cls: "bg-[#6366F1]/20 text-[#818CF8] border-[#6366F1]/40" }
     : isUpcoming
-    ? { label: "UPCOMING", cls: "bg-white/[0.05] text-[#94A3B8] border-white/[0.1]" }
+    ? isRegClosed
+      ? { label: "REGISTRATION CLOSED", cls: "bg-amber-500/10 text-amber-300 border-amber-500/30" }
+      : { label: "UPCOMING", cls: "bg-white/[0.05] text-[#94A3B8] border-white/[0.1]" }
     : { label: "ENDED", cls: "bg-white/[0.02] text-[#64748B] border-white/[0.04]" };
 
-  const canApply = !isEnded && hackathon.status === "PUBLISHED";
+  const canApply = !isEnded && !isRegClosed && hackathon.status === "PUBLISHED";
 
   const handleAcceptRulesAndApply = () => {
     setRulesAccepted(true);
@@ -226,6 +246,11 @@ export default function HackathonDetailPage() {
             </div>
           </div>
 
+          {/* Release v5.0: In-Hackathon Leaderboard with Gold/Silver/Bronze Trophies (rendered once judges add marks) */}
+          {v5Active && (
+            <HackathonLeaderboardCard hackathonId={hackathon.id} hackathonTitle={hackathon.title} />
+          )}
+
           {/* Domains & Problem Statements */}
           <div className="bg-[#0B0E18]/70 backdrop-blur-md border border-white/[0.08] rounded-3xl overflow-hidden shadow-xl">
             <div className="p-6 border-b border-white/[0.08] bg-white/[0.02]">
@@ -252,7 +277,7 @@ export default function HackathonDetailPage() {
                       ) : (
                         <span className="text-[10px] font-mono text-[#94A3B8] bg-white/[0.03] px-2 py-0.5 rounded border border-white/[0.06] flex items-center gap-1">
                           <Lock className="w-3 h-3 text-[#818CF8]" />
-                          Unlocks {revealAt.toLocaleDateString("en-IN")} at {revealAt.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+                          Unlocks at {revealAt.toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })} IST ({revealAt.toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" })})
                         </span>
                       )}
                     </div>
@@ -260,11 +285,23 @@ export default function HackathonDetailPage() {
                       <p className="text-xs text-[#94A3B8] leading-relaxed">{domain.description}</p>
                     )}
                     {isRevealed && domain.problemStatements.length > 0 ? (
-                      <div className="space-y-1.5 pl-6">
+                      <div className="space-y-2 pl-6">
                         {domain.problemStatements.map((ps) => (
-                          <div key={ps.id} className="text-xs font-mono text-[#F8FAFC] flex items-center gap-2 font-medium">
-                            <span className="text-[#818CF8] font-bold">→</span>
-                            {ps.title}
+                          <div key={ps.id} className="text-xs font-mono text-[#F8FAFC] space-y-0.5">
+                            <div className="flex items-center gap-2 font-medium">
+                              <span className="text-[#818CF8] font-bold">→</span>
+                              {ps.code && (
+                                <span className="px-1.5 py-0.2 rounded bg-[#6366F1]/20 text-[#818CF8] text-[10px] font-bold">
+                                  {ps.code}
+                                </span>
+                              )}
+                              <span>{ps.title}</span>
+                            </div>
+                            {ps.mission && (
+                              <p className="text-[11px] text-slate-400 pl-4 font-mono line-clamp-1">
+                                {ps.mission}
+                              </p>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -368,6 +405,12 @@ export default function HackathonDetailPage() {
             {/* Schedule */}
             <div className="space-y-2 text-xs font-mono pt-1 border-t border-white/[0.08]">
               <div className="flex items-center justify-between text-[#94A3B8]">
+                <span className="flex items-center gap-1.5"><Clock className="w-3 h-3 text-[#818CF8]" /> Reg. Closes</span>
+                <span className="text-[#F8FAFC] font-bold">
+                  {regDeadline.toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}, {regDeadline.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-[#94A3B8]">
                 <span className="flex items-center gap-1.5"><Calendar className="w-3 h-3 text-[#818CF8]" /> Start</span>
                 <span className="text-[#F8FAFC] font-bold">
                   {startAt.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
@@ -384,6 +427,31 @@ export default function HackathonDetailPage() {
                 <span className="text-[#F8FAFC] font-bold">{hackathon._count?.teams ?? 0} registered</span>
               </div>
             </div>
+
+            {/* Registration Status Banner */}
+            {!isEnded && (
+              isRegClosed ? (
+                <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs font-mono space-y-1.5 text-center">
+                  <div className="flex items-center justify-center gap-1.5 text-amber-300 font-bold uppercase text-[11px]">
+                    <Clock className="w-4 h-4 text-amber-400" />
+                    <span>Registration Closed</span>
+                  </div>
+                  <p className="text-[11px] text-amber-200/80 leading-relaxed">
+                    The registration end time declared by the host ({regDeadline.toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}, {regDeadline.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })} IST) has passed. Student squad registrations are closed.
+                  </p>
+                </div>
+              ) : (
+                <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-[11px] font-mono text-emerald-300 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 font-bold">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    Registration Open
+                  </span>
+                  <span className="text-emerald-200/80 text-[10px]">
+                    Until {regDeadline.toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}, {regDeadline.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })}
+                  </span>
+                </div>
+              )
+            )}
 
             {/* Apply Button & Rules Acceptance Gate */}
             {canApply ? (

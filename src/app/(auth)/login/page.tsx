@@ -1,34 +1,38 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Lock, Mail, ArrowRight, AlertCircle } from "lucide-react";
+import GoogleSignInButton from "@/components/auth/GoogleSignInButton";
 
-export default function LoginPage() {
-  const [email, setEmail] = useState("lead.priya@student.edu");
-  const [password, setPassword] = useState("Password@123");
+function LoginForm() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [activeTab, setActiveTab] = useState<"STUDENT" | "HOST" | "JUDGE" | "ADMIN">("STUDENT");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const paramError = searchParams.get("error");
+    if (paramError) {
+      setError(decodeURIComponent(paramError));
+    }
+
+    const paramRole = searchParams.get("role");
+    if (paramRole) {
+      const upper = paramRole.toUpperCase();
+      if (upper === "STUDENT" || upper === "HOST" || upper === "JUDGE" || upper === "ADMIN") {
+        setActiveTab(upper);
+      }
+    }
+  }, [searchParams]);
 
   const handleRoleTab = (role: "STUDENT" | "HOST" | "JUDGE" | "ADMIN") => {
     setActiveTab(role);
     setError(null);
-    if (role === "STUDENT") {
-      setEmail("lead.priya@student.edu");
-      setPassword("Password@123");
-    } else if (role === "HOST") {
-      setEmail("host.mit@college.edu");
-      setPassword("Password@123");
-    } else if (role === "JUDGE") {
-      setEmail("judge.alex@industry.com");
-      setPassword("Password@123");
-    } else if (role === "ADMIN") {
-      setEmail("admin@hackbridge.dev");
-      setPassword("Admin@123");
-    }
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -40,7 +44,7 @@ export default function LoginPage() {
       const res = await fetch("/api/v1/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, role: activeTab }),
       });
 
       const data = await res.json();
@@ -111,11 +115,22 @@ export default function LoginPage() {
       <div className="flex-1 flex items-center justify-center p-6 md:p-12">
         <div className="w-full max-w-md bg-[#0B0E18]/80 backdrop-blur-md border border-white/[0.08] rounded-3xl p-8 space-y-6 shadow-2xl">
           <div>
-            <h1 className="font-display text-2xl font-extrabold text-[#F8FAFC] tracking-tight">
-              Sign In to HackBridge
-            </h1>
-            <p className="text-xs text-[#94A3B8] mt-1 font-medium">
-              Select your persona or enter your registered credentials.
+            <div className="flex items-center justify-between mb-1">
+              <h1 className="font-display text-2xl font-extrabold text-[#F8FAFC] tracking-tight">
+                Sign In to HackBridge
+              </h1>
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#6366F1]/20 text-[#818CF8] border border-[#6366F1]/30 uppercase tracking-wider">
+                {activeTab === "STUDENT" ? "Student Portal" : activeTab === "HOST" ? "Host Portal" : activeTab === "JUDGE" ? "Judge Portal" : "Admin Console"}
+              </span>
+            </div>
+            <p className="text-xs text-[#94A3B8] font-medium">
+              {activeTab === "STUDENT"
+                ? "Student Portal — Registered participants & squad builders only."
+                : activeTab === "HOST"
+                ? "Host Portal — Hackathon chapter organizers & university leads."
+                : activeTab === "JUDGE"
+                ? "Judge Portal — Designated evaluators & track jury members."
+                : "Admin Console — Platform executive administration."}
             </p>
           </div>
 
@@ -177,6 +192,22 @@ export default function LoginPage() {
               <span>{error}</span>
             </div>
           )}
+
+          {/* Prompt 10: Continue with Google */}
+          <div className="space-y-4">
+            <GoogleSignInButton
+              action="login"
+              role={activeTab === "ADMIN" ? "STUDENT" : activeTab}
+            />
+
+            <div className="relative flex items-center justify-center">
+              <div className="border-t border-white/[0.08] w-full" />
+              <span className="bg-[#0B0E18] px-3 text-[10px] font-mono text-[#64748B] uppercase tracking-wider shrink-0">
+                or email & password
+              </span>
+              <div className="border-t border-white/[0.08] w-full" />
+            </div>
+          </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
@@ -243,7 +274,7 @@ export default function LoginPage() {
               Mint Student ID
             </Link>
             {" · "}
-            <Link href="/register" className="text-[#6366F1] font-bold underline underline-offset-4 hover:text-[#818CF8] transition-colors">
+            <Link href="/register/college" className="text-[#6366F1] font-bold underline underline-offset-4 hover:text-[#818CF8] transition-colors">
               Host / Register
             </Link>
           </div>
@@ -252,3 +283,12 @@ export default function LoginPage() {
     </div>
   );
 }
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-transparent" />}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+

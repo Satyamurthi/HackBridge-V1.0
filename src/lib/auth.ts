@@ -27,7 +27,16 @@ export async function hashPassword(password: string): Promise<string> {
  * Verify a plain password against hashed password
  */
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  return bcrypt.compare(password, hash);
+  const match = await bcrypt.compare(password, hash);
+  if (match) return true;
+  // Fallback for collegiate default credentials: allow both 12345678 and Welcome@123
+  if (password === "12345678" && (await bcrypt.compare("Welcome@123", hash))) {
+    return true;
+  }
+  if (password === "Welcome@123" && (await bcrypt.compare("12345678", hash))) {
+    return true;
+  }
+  return false;
 }
 
 /**

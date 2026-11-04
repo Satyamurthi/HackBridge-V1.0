@@ -17,10 +17,12 @@ import {
   ArrowRight, 
   Copy, 
   Check, 
-  ShieldCheck,
-  FileCheck,
-  Briefcase
+  ShieldCheck, 
+  FileCheck, 
+  Briefcase,
+  Clock
 } from "lucide-react";
+import GoogleSignInButton from "@/components/auth/GoogleSignInButton";
 
 export default function RegisterCompanyPage() {
   const router = useRouter();
@@ -235,6 +237,33 @@ export default function RegisterCompanyPage() {
                 </p>
               </div>
 
+              {/* Admin Approval Notice & Contact Card */}
+              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-left space-y-2">
+                <div className="flex items-center gap-2 text-xs font-mono font-bold text-amber-300 uppercase tracking-wider">
+                  <Clock className="w-4 h-4 text-amber-400" />
+                  <span>Waiting for Admin Approval</span>
+                </div>
+                <p className="text-[11px] font-mono text-amber-200/90 leading-relaxed">
+                  Only approved hosts can access or host hackathons. To activate your corporate host account immediately, please contact <a href="tel:9380968402" className="text-white font-bold underline hover:text-[#818CF8]">9380968402</a> or <a href="mailto:admin@hackbridge.dev" className="text-white font-bold underline hover:text-[#818CF8]">Admin</a>.
+                </p>
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <a
+                    href="tel:9380968402"
+                    className="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 text-[10px] font-mono font-bold border border-amber-500/40 transition-colors flex items-center gap-1.5"
+                  >
+                    📞 Call 9380968402
+                  </a>
+                  <a
+                    href="https://wa.me/919380968402?text=Hello%20Admin,%20my%20corporate%20host%20registration%20is%20waiting%20for%20approval."
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-[10px] font-mono font-bold border border-emerald-500/40 transition-colors flex items-center gap-1.5"
+                  >
+                    💬 WhatsApp Admin
+                  </a>
+                </div>
+              </div>
+
               <div className="pt-2 flex flex-col sm:flex-row items-center gap-3">
                 <Link
                   href="/dashboard/host"
@@ -266,6 +295,24 @@ export default function RegisterCompanyPage() {
                 <p className="text-xs text-[#94A3B8]">
                   Register your organization to sponsor tracks and host technical hackathons.
                 </p>
+              </div>
+
+              {/* Prompt 10: Continue with Google */}
+              <div className="space-y-4">
+                <GoogleSignInButton
+                  role="HOST"
+                  orgType="company"
+                  action="register"
+                  label="Register Company Chapter with Google"
+                />
+
+                <div className="relative flex items-center justify-center">
+                  <div className="border-t border-white/[0.08] w-full" />
+                  <span className="bg-[#0B0E18] px-3 text-[10px] font-mono text-[#64748B] uppercase tracking-wider shrink-0">
+                    or register with official corporate email
+                  </span>
+                  <div className="border-t border-white/[0.08] w-full" />
+                </div>
               </div>
 
               {formError && (

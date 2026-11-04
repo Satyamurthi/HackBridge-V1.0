@@ -14,6 +14,7 @@ import {
   FileCode,
   AlertCircle
 } from "lucide-react";
+import { isV5Enabled } from "@/lib/version-gate";
 
 interface ProblemStatementItem {
   id: string;
@@ -69,7 +70,10 @@ export default function MyHackathonsPage() {
 
   // Time ticker for live countdowns
   const [currentTime, setCurrentTime] = useState(Date.now());
+  const [v5Active, setV5Active] = useState(false);
+
   useEffect(() => {
+    setV5Active(isV5Enabled());
     const timer = setInterval(() => setCurrentTime(Date.now()), 1000);
     return () => clearInterval(timer);
   }, []);
@@ -151,7 +155,7 @@ export default function MyHackathonsPage() {
     const secs = Math.floor((diff % (1000 * 60)) / 1000);
     return {
       isOver: false,
-      text: `${String(hours).padStart(2, "0")}h ${String(mins).padStart(2, "0")}m ${String(secs).padStart(2, "0")}s`,
+      text: `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`,
     };
   };
 
@@ -246,9 +250,19 @@ export default function MyHackathonsPage() {
                       {isLive ? "LIVE ARENA ACTIVE" : isUpcoming ? "UPCOMING TRACK" : "COMPLETED"}
                     </span>
 
-                    <span className="text-xs font-mono text-[#818CF8] font-bold">
-                      Squad: {team.name}
-                    </span>
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-xs font-mono text-[#818CF8] font-bold">
+                        Squad: {team.name}
+                      </span>
+                      {v5Active && ((team as any).isWinner || (team as any).hackathonHasWinners || (team as any).result) && (
+                        <Link
+                          href={`/hackathons/${hackathon.slug}#leaderboard`}
+                          className="px-2.5 py-1 rounded-full text-[10px] font-bold font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 hover:bg-emerald-500/25 transition-all shadow-sm shadow-emerald-500/10"
+                        >
+                          <span>Winners →</span>
+                        </Link>
+                      )}
+                    </div>
                   </div>
 
                   {/* Title & Dates */}

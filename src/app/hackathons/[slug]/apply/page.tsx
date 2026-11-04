@@ -14,7 +14,15 @@ import {
   RefreshCw,
   Clock,
   Sparkles,
+  Target,
 } from "lucide-react";
+
+interface DomainOption {
+  id: string;
+  name: string;
+  description?: string | null;
+  problemStatements: Array<{ id: string; title: string }>;
+}
 
 interface HackathonDetail {
   id: string;
@@ -25,6 +33,7 @@ interface HackathonDetail {
   paymentMode: string;
   teamMin: number;
   teamMax: number;
+  registrationDeadline?: string;
   startAt: string;
   endAt: string;
   host: {
@@ -79,6 +88,10 @@ export default function ApplyPage() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // Domain selection state
+  const [availableDomains, setAvailableDomains] = useState<DomainOption[]>([]);
+  const [selectedDomainId, setSelectedDomainId] = useState<string>("");
+
   // Draft & conflict states
   const [leadConflict, setLeadConflict] = useState<string | null>(null);
   const [existingDraftTeam, setExistingDraftTeam] = useState<ExistingDraftTeam | null>(null);
@@ -100,7 +113,7 @@ export default function ApplyPage() {
       .catch(() => setLoadingSession(false));
   }, []);
 
-  // 2. Fetch Hackathon details
+  // 2. Fetch Hackathon details + available domains
   useEffect(() => {
     if (!slug) return;
     setLoadingHackathon(true);
@@ -109,6 +122,20 @@ export default function ApplyPage() {
       .then((data) => {
         if (data?.hackathon) setHackathon(data.hackathon);
         setLoadingHackathon(false);
+
+        // Fetch domains for this hackathon
+        if (data?.hackathon?.id) {
+          fetch(`/api/v1/hackathons/${data.hackathon.id}/domains`)
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+              if (d?.domains) {
+                setAvailableDomains(d.domains);
+                // Auto-select first domain if only one
+                if (d.domains.length === 1) setSelectedDomainId(d.domains[0].id);
+              }
+            })
+            .catch(() => {});
+        }
       })
       .catch(() => setLoadingHackathon(false));
   }, [slug]);
@@ -277,8 +304,11 @@ export default function ApplyPage() {
   const allTeammatesValidated =
     teammates.length === 0 || teammates.every((t) => t.isEligible && Boolean(t.studentId));
 
+  const hasDomainSelected = availableDomains.length === 0 || Boolean(selectedDomainId);
+
   const isReadyToSubmit =
     hasTeamName &&
+    hasDomainSelected &&
     meetsMinSize &&
     withinMaxSize &&
     allTeammatesValidated &&
@@ -289,6 +319,9 @@ export default function ApplyPage() {
   const requirementMessage = useMemo(() => {
     if (!hasTeamName) {
       return "Enter squad name";
+    }
+    if (availableDomains.length > 0 && !selectedDomainId) {
+      return "Select a competing domain";
     }
     if (currentTotal < minRequired) {
       const remaining = minRequired - currentTotal;
@@ -304,7 +337,7 @@ export default function ApplyPage() {
       return "Lead active in another event";
     }
     return `Squad ready (${currentTotal} of ${maxAllowed} members)`;
-  }, [hasTeamName, currentTotal, minRequired, maxAllowed, allTeammatesValidated, leadConflict]);
+  }, [hasTeamName, availableDomains.length, selectedDomainId, currentTotal, minRequired, maxAllowed, allTeammatesValidated, leadConflict]);
 
   // Submit squad application
   const handleSubmit = async (e: React.FormEvent) => {
@@ -318,6 +351,7 @@ export default function ApplyPage() {
       hackathonId: hackathon.id,
       teamName: teamName.trim(),
       name: teamName.trim(),
+      domainId: selectedDomainId || undefined,
       teammateHackathonIds: teammates.map((t) => t.hackathonId),
       members: teammates.map((t) => ({
         studentId: t.studentId,
@@ -402,6 +436,38 @@ export default function ApplyPage() {
         <h1 className="font-display text-lg font-bold text-[#F8FAFC] mb-2">Hackathon Not Found</h1>
         <Link href="/hackathons" className="text-xs font-mono text-[#818CF8] hover:underline">
           ← Back to Hackathons
+        </Link>
+      </div>
+    );
+  }
+
+  const now = new Date();
+  const regDeadline = hackathon?.registrationDeadline
+    ? new Date(hackathon.registrationDeadline)
+    : hackathon ? new Date(hackathon.startAt) : null;
+  const isRegClosed = regDeadline ? now > regDeadline : false;
+
+  if (isRegClosed && !existingDraftTeam) {
+    return (
+      <div className="max-w-lg mx-auto px-4 py-20 text-center relative z-10 font-mono">
+        <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto text-amber-400 mb-4">
+          <Clock className="w-7 h-7" />
+        </div>
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-300 font-bold mb-3">
+          <span>REGISTRATION CLOSED</span>
+        </div>
+        <h1 className="font-display text-2xl font-bold text-[#F8FAFC] mb-2">
+          Registration Has Ended
+        </h1>
+        <p className="text-xs text-[#94A3B8] mb-6 leading-relaxed max-w-md mx-auto">
+          The registration deadline declared by the host ({regDeadline?.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}, {regDeadline?.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })} IST) has passed. Student squad registrations are closed for this hackathon.
+        </p>
+        <Link
+          href={`/hackathons/${hackathon.slug}`}
+          className="px-5 py-2.5 rounded-xl bg-[#6366F1] hover:bg-[#4F46E5] text-white font-bold text-xs uppercase tracking-wider transition-colors inline-flex items-center gap-2"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Hackathon Overview
         </Link>
       </div>
     );
@@ -573,12 +639,72 @@ export default function ApplyPage() {
           </div>
         </div>
 
-        {/* Step 2: Teammate Addition */}
+        {/* Step 2: Domain Selection */}
+        {availableDomains.length > 0 && (
+          <div className="p-7 rounded-3xl bg-[#0B0E18]/55 backdrop-blur-md border border-white/[0.08] space-y-4 shadow-xl">
+            <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+              <div className="flex items-center gap-2.5">
+                <span className="w-6 h-6 rounded-full bg-[#6366F1] text-white font-mono text-xs flex items-center justify-center font-bold shadow-sm">
+                  2
+                </span>
+                <h2 className="text-sm font-bold text-[#F8FAFC]">Select Competing Domain</h2>
+              </div>
+              <span className="text-[11px] font-mono text-[#94A3B8] font-semibold">
+                {selectedDomainId
+                  ? <span className="text-emerald-400 font-bold">✓ Domain Selected</span>
+                  : "Required"}
+              </span>
+            </div>
+
+            <p className="text-xs text-[#94A3B8] font-mono leading-relaxed">
+              Select the technology/theme domain your squad will compete in.
+              <strong className="text-[#F8FAFC]"> At problem statement reveal time, your squad will only see problem statements within this domain.</strong>
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {availableDomains.map((domain) => (
+                <button
+                  key={domain.id}
+                  type="button"
+                  onClick={() => setSelectedDomainId(domain.id)}
+                  className={`p-4 rounded-2xl text-left transition-all border space-y-1.5 ${
+                    selectedDomainId === domain.id
+                      ? "bg-[#6366F1]/20 border-[#6366F1]/50 shadow-md shadow-indigo-500/10"
+                      : "bg-white/[0.02] border-white/[0.08] hover:border-[#6366F1]/30 hover:bg-white/[0.04]"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Target className={`w-4 h-4 ${selectedDomainId === domain.id ? "text-[#818CF8]" : "text-[#64748B]"}`} />
+                      <span className={`text-sm font-bold ${selectedDomainId === domain.id ? "text-white" : "text-[#F8FAFC]"}`}>
+                        {domain.name}
+                      </span>
+                    </div>
+                    {selectedDomainId === domain.id && (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    )}
+                  </div>
+                  {domain.description && (
+                    <p className="text-[11px] text-[#94A3B8] font-mono leading-relaxed">
+                      {domain.description}
+                    </p>
+                  )}
+                  <div className="text-[10px] font-mono text-[#64748B] font-bold">
+                    {domain.problemStatements.length} problem statement(s)
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Step 3: Teammate Addition */}
+
         <div className="p-7 rounded-3xl bg-[#0B0E18]/55 backdrop-blur-md border border-white/[0.08] space-y-5 shadow-xl">
           <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
             <div className="flex items-center gap-2.5">
               <span className="w-6 h-6 rounded-full bg-[#6366F1] text-white font-mono text-xs flex items-center justify-center font-bold shadow-sm">
-                2
+                {availableDomains.length > 0 ? "3" : "2"}
               </span>
               <h2 className="text-sm font-bold text-[#F8FAFC]">Squad Members</h2>
             </div>

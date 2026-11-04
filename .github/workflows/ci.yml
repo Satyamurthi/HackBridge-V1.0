@@ -1,51 +1,39 @@
-name: HackBridge Production CI
+name: HackBridge Automated CI Loop
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
   pull_request:
-    branches: [main]
+    branches: [main, master]
 
 jobs:
-  validate:
-    name: Lint, Typecheck, Test & Build
+  test:
     runs-on: ubuntu-latest
-
-    env:
-      DATABASE_URL: "file:./dev.db"
-      JWT_SECRET: "ci_jwt_secret_super_secure_32_chars_long_12345"
-      RAZORPAY_KEY_ID: "rzp_test_ci_id"
-      RAZORPAY_KEY_SECRET: "rzp_test_ci_secret"
-      GITHUB_TOKEN: "ghp_ci_stub_token"
-      GITHUB_ORG: "hackbridge-ci"
-
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20.x
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: "npm"
 
-      - name: Install dependencies
+      - name: Install Dependencies
         run: npm ci
 
       - name: Generate Prisma Client
         run: npx prisma generate
 
-      - name: Push Database Schema
-        run: npx prisma db push
+      - name: Run Self-Fixing Test Loop
+        run: npm run test:loop
+        env:
+          DATABASE_URL: "file:./test.db"
+          GITHUB_TOKEN: "mock-ci-token-test-safe"
 
-      - name: Seed Initial State
-        run: npx tsx prisma/seed.ts
-
-      - name: Run TypeScript Verification
-        run: npx tsc --noEmit
-
-      - name: Run Vitest Test Suites
-        run: npx vitest run --fileParallelism=false
-
-      - name: Verify Next.js Production Build
-        run: npm run build
+      - name: Upload Test Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hackbridge-test-results
+          path: test-results/

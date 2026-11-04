@@ -1,10 +1,16 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Terminal, Building, Briefcase, Award, ArrowRight } from "lucide-react";
 
 export default function RegisterHubPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace("/signup/student");
+  }, [router]);
   const options = [
     {
       title: "Student Builder",
@@ -37,7 +43,7 @@ export default function RegisterHubPage() {
       title: "Judge / Mentor",
       role: "JUDGE",
       desc: "Review teams against weighted rubric criteria, run live code inspections, and submit immutable scores.",
-      href: "/signup/judge",
+      href: "/register/judge",
       icon: Award,
       badge: "Industry Evaluator",
       primary: false,

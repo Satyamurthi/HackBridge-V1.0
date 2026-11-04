@@ -1,13 +1,18 @@
 import React from "react";
 import Link from "next/link";
 import { ArrowRight, Lock, Layers, GitBranch, Shield, Terminal } from "lucide-react";
+import { getPublishedPageSections } from "@/lib/cms-server";
 
-export const metadata = {
-  title: "Protocol Documentation | HackBridge",
-  description: "Complete architectural specification of the HackBridge competitive hackathon infrastructure.",
-};
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
-export default function DocsPage() {
+export default async function DocsPage() {
+  const contentSections = await getPublishedPageSections("page_docs");
+
+  const headerSection = contentSections?.find((s) => s.type === "header" || s.type === "hero");
+  const heading = headerSection?.heading || "HackBridge Protocol Documentation";
+  const subheading = headerSection?.subheading || "The mathematical, cryptographic, and database specifications governing team formation, atomic problem unlocks, and immutable evaluation.";
+
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-8 py-16 w-full">
       {/* Header */}
@@ -17,10 +22,10 @@ export default function DocsPage() {
           ARCHITECTURE SPECIFICATION v1.0
         </div>
         <h1 className="font-display text-4xl sm:text-5xl font-extrabold text-white tracking-tight leading-[1.1]">
-          HackBridge Protocol Documentation
+          {heading}
         </h1>
         <p className="text-base text-slate-400 leading-relaxed">
-          The mathematical, cryptographic, and database specifications governing team formation, atomic problem unlocks, and immutable evaluation.
+          {subheading}
         </p>
       </div>
 

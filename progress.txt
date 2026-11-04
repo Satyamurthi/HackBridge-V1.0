@@ -82,3 +82,77 @@
   - Production Build: 29 static pages, 38 API routes compiled with 0 errors
   - Dev Server: Running at `http://localhost:3000`
 
+## Iteration 11 — Domain Pre-selection, Scoped Problem Statements & Judge Rubric Scoring (COMPLETED)
+- Implemented compulsory UPI ID & dual-mode QR generation/upload for hackathon hosts.
+- Implemented Super Admin approval gatekeeper for Hosts and Judges with explicit contact notice: "Waiting for admin approval. Contact 9380968402 Or Admin to activate your evaluation access."
+- Implemented host-declared registration end time (`registrationDeadline`) cutoff on team registration.
+- Implemented Student Squad Competing Domain pre-selection at registration (`/hackathons/[slug]/apply`) and in arena (`/api/v1/teams/[teamId]/select-domain`).
+- Scoped Problem Statement Reveal: `/api/v1/hackathons/[id]/problem-statements?teamId={teamId}` filters problem statements strictly to the squad's chosen domain only.
+- Atomic problem statement selection (`/api/v1/teams/[teamId]/select-statement`) enforces domain matching and auto-provisions code repository.
+- Final Submission (`/api/v1/teams/[teamId]/submission`) validates selected problem statement, accepts source code repo, live demo link, application APK/binary, and technical architecture writeup with immutable lock.
+- Judge Evaluation Queue (`/dashboard/judge` and `/api/v1/judge/submissions`): returns team domain, problem statement, demo link, application binary link, and code repo.
+- Real-time Weighted Rubric Scoring (`/api/v1/judge/score`): computes `∑ (score * weight) / ∑ weight` dynamically in the evaluation modal.
+- Test suites: 12 suites, 68/68 Vitest tests passed (100%).
+- ESLint: 0 errors. TypeScript: 0 errors. Next.js Production Build: 29 static pages, 42 API routes successfully compiled.
+## Iteration 12 — Super Admin Privileges: Deletion, Dashboard Full Field Editing & Dynamic Navbar/Footer (COMPLETED)
+- Built permanent deletion & cascade cleanup protocols for Super Admin:
+  - Users API (`/api/v1/admin/users`): `DELETE` handler with foreign key transaction cascade (removes audit logs, student/host/judge profiles, and blocks self-deletion of active Super Admin).
+  - Hackathons API (`/api/v1/admin/hackathons`): `DELETE` handler cascading domains, problem statements, rubrics, teams, submissions, scores, and payments.
+  - Hosts API (`/api/v1/admin/hosts`): `DELETE` handler for host records.
+  - Judges API (`/api/v1/admin/judges`): `DELETE` handler for judge records.
+  - Payments API (`/api/v1/admin/payments`): `DELETE` handler for payment logs.
+- Built universal field editing across the admin dashboard:
+  - Users: Full `PATCH` updating core fields (`name`, `email`, `phone`, `role`, `status`) and role-specific metadata (`college`, `githubUsername`, `skills`, `bio`, `orgName`, `type`, `upiId`, `website`, `designation`, `company`, `approvalStatus`).
+  - Hackathons: Full `PATCH` updating `title`, `slug`, `description`, `rules`, `fee`, `paymentMode`, `upiId`, `qrImageUrl`, `bannerUrl`, `prizePool`, `teamMin`, `teamMax`, `registrationDeadline`, `startAt`, `endAt`, `status`.
+  - Hosts & Judges: Interactive editing of organizational affiliation, designation, company, and approval status.
+- Built dynamic Navbar and Footer configuration architecture:
+  - Navigation defaults & types (`src/lib/navigation-defaults.ts`).
+  - Public/Admin Navigation API (`/api/v1/content/navigation`): `GET` delivers active config merged with defaults; `POST` saves custom config to `SiteContent` with Super Admin authorization and cache revalidation.
+  - Visual Navbar & Footer Editor component (`src/components/admin/NavigationFooterEditor.tsx`): live editing of brand names, logo URL, announcement banner (toggle, text, link), role-specific links (Public, Student, Host, Judge, Admin), footer description, status badge, columns and child links, copyright, and direct contact details.
+  - Admin Dashboard integration (`src/app/dashboard/admin/page.tsx` & `SiteContentCMS.tsx`): consolidated Navbar & Footer management directly inside "Site CMS" via sub-navigation tabs ("Public Pages CMS" vs "Navbar & Footer CMS"), keeping the Super Admin sidebar clean.
+  - Dynamic `Navbar.tsx` and `Footer.tsx` reading live configurations from the database.
+- Verification:
+  - Vitest: 13 test suites, 75/75 tests passed (100%).
+  - TypeScript: `npx tsc --noEmit` exited with 0 errors.
+  - ESLint: 0 errors.
+  - Next.js Production Build: 29 pages, 43 API routes successfully compiled.
+  - Cloudflare Tunnel: Active at `https://bend-assisted-uniprotkb-calculation.trycloudflare.com`.
+
+## Iteration 13 — Domains, Hidden Problem Statements, Team Workspace, Progress Bar, 4-Stage Docs & GitHub Push (COMPLETED)
+- Universal Hero Pill Badge Editability (Image Task):
+  - Made hero badge prefix (`PROTOCOL v1.0`), description (`Collegiate Hackathon Infrastructure`), and status tag (`LIVE`) completely editable in Super Admin Site Content CMS (`src/components/admin/SiteContentCMS.tsx`).
+  - Merged into `cms-defaults.ts` and dynamically read by `src/components/home/HomePageClient.tsx`.
+- Domains & Problem Statements:
+  - Extended Prisma schema with `difficulty` (`EASY`, `MEDIUM`, `HARD`), `attachmentUrl`, `attachmentName`, and stage deadlines (`part1Due`..`part4Due`).
+  - Registration bound to domain; live team count per domain shown in Host Arena.
+  - Problem statements strictly hidden server-side until server clock `revealAt`.
+  - Domain-scoped visibility post-reveal; cross-domain requests rejected with HTTP 403.
+- Problem Statement Selection:
+  - Confirmation step modal before finalizing selection.
+  - Atomic concurrency protection returning `"Slots full"` when cap reached.
+- Team Workspace & Combined Progress:
+  - Combined progress bar displaying squad average, last updated timestamp, and author.
+  - Member breakdown cards with individual percentages and notes.
+  - Non-decreasing member progress updater form.
+- 4-Stage Documentation Upload Section:
+  - Parts 1 to 4 with file validation (PDF, DOCX, PPTX, ZIP <= 25MB).
+  - Version history trace (`v1`, `v2`, etc.) preserving all previous versions.
+  - Host-configured stage deadlines with countdown and locking.
+- Automatic GitHub Push:
+  - Commits uploaded files to `{hackathon}/{teamId}/Part_{stage}/{fileName}` with standard commit message.
+  - Reads `GITHUB_TOKEN` from `.env` without logging or leaking.
+  - Background retry with `Failed with Retry` status and clean messages.
+  - Documented in `SETUP.md`.
+- Unified Activity Timeline:
+  - Chronological trace merging progress updates and document uploads for host and judge review.
+- Automated Self-Fixing Test Loop & Simulation:
+  - Created `scripts/test-loop.js` and `npm run test:loop`.
+  - Generated `test-results/STATUS.md` (`ALL TESTS PASSING`), `test-results/index.html`, and `test-results/SIMULATION-REPORT.md`.
+  - Pre-push hook (`.github/hooks/pre-push`) and CI workflow (`.github/workflows/ci.yml`).
+  - Standing rule added to `AGENTS.md` and `TASK.md`.
+- Verification:
+  - **14 test suites, 92 / 92 tests passing (100%)**.
+  - TypeScript: `npx tsc --noEmit` exited with 0 errors.
+  - ESLint: 0 errors.
+  - Dev server and Cloudflare tunnel running.
+

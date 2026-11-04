@@ -61,7 +61,7 @@ describe("Phase 1 Gate: All Four Roles Database Entities & Seed Verification", (
     expect(admin).not.toBeNull();
     expect(admin?.role).toBe("SUPER_ADMIN");
     expect(admin?.status).toBe("ACTIVE");
-    const match = await verifyPassword("Admin@123", admin!.passwordHash);
+    const match = await verifyPassword("Admin@123", admin!.passwordHash!);
     expect(match).toBe(true);
   });
 

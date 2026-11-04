@@ -61,9 +61,12 @@ export default function Hero3D() {
   const [reducedMotion, setReducedMotion] = useState(false);
 
   useEffect(() => {
-    // 1. Accessibility: prefers-reduced-motion check
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    // 1. Accessibility: prefers-reduced-motion check or Firefox on Linux
+    const isFirefox = typeof navigator !== "undefined" && /firefox/i.test(navigator.userAgent);
+    const isLinux = typeof navigator !== "undefined" && /linux/i.test(navigator.userAgent);
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || (isFirefox && isLinux)) {
       setReducedMotion(true);
+      setHasWebGL(false);
       return;
     }
 

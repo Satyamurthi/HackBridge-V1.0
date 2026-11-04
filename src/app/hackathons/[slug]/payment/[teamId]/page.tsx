@@ -13,8 +13,12 @@ import {
   Copy,
   Check,
   RefreshCw,
-  Users
+  Users,
+  ExternalLink,
+  Smartphone,
+  Sparkles
 } from "lucide-react";
+import { generateUpiQrCode, buildUpiPaymentUri } from "@/lib/upi-qr";
 
 interface TeamData {
   id: string;
@@ -66,6 +70,36 @@ export default function PaymentPage() {
   const [error, setError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState(false);
   const [copiedUpi, setCopiedUpi] = useState(false);
+  const [autoQrUrl, setAutoQrUrl] = useState<string | null>(null);
+
+  // Auto-generate QR if qrImageUrl is not already provided but upiId exists
+  useEffect(() => {
+    if (!team?.hackathon) return;
+    const { qrImageUrl, upiId, fee, title, host } = team.hackathon;
+    if (qrImageUrl) {
+      setAutoQrUrl(qrImageUrl);
+      return;
+    }
+    if (upiId) {
+      generateUpiQrCode({
+        upiId,
+        payeeName: host?.orgName || title,
+        amount: fee > 0 ? fee : undefined,
+        note: `${title} Entry Fee`,
+      })
+        .then((url) => setAutoQrUrl(url))
+        .catch((err) => console.error("[PaymentPage] Failed to generate UPI QR:", err));
+    }
+  }, [team?.hackathon]);
+
+  const upiLink = team?.hackathon.upiId
+    ? buildUpiPaymentUri({
+        upiId: team.hackathon.upiId,
+        payeeName: team.hackathon.host?.orgName || team.hackathon.title,
+        amount: team.hackathon.fee > 0 ? team.hackathon.fee : undefined,
+        note: `${team.hackathon.title} Registration`,
+      })
+    : null;
 
   // QR Form states
   const [txnRef, setTxnRef] = useState("");
@@ -409,21 +443,30 @@ export default function PaymentPage() {
                   Host UPI Payment QR
                 </div>
 
-                <div className="w-56 h-56 mx-auto bg-[#111524]/60 p-3 rounded-2xl border border-white/[0.08] flex items-center justify-center">
-                  {team.hackathon.qrImageUrl ? (
+                <div className="w-56 h-56 mx-auto bg-white p-2.5 rounded-2xl border border-white/20 shadow-lg flex items-center justify-center">
+                  {(autoQrUrl || team.hackathon.qrImageUrl) ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img
-                      src={team.hackathon.qrImageUrl}
+                      src={autoQrUrl || team.hackathon.qrImageUrl!}
                       alt="Host Payment QR"
                       className="w-full h-full object-contain rounded-xl"
                     />
                   ) : (
-                    <div className="text-[#F8FAFC] font-mono text-xs flex flex-col items-center justify-center gap-2">
+                    <div className="text-slate-800 font-mono text-xs flex flex-col items-center justify-center gap-2">
                       <QrCode className="w-16 h-16 text-[#6366F1]" />
                       <span className="font-bold">Scan via PhonePe / GPay</span>
                     </div>
                   )}
                 </div>
+
+                {upiLink && (
+                  <a
+                    href={upiLink}
+                    className="w-full py-2.5 px-3 rounded-xl bg-[#6366F1] hover:bg-[#4F46E5] text-white text-xs font-mono font-bold flex items-center justify-center gap-2 shadow-sm transition-colors"
+                  >
+                    <Smartphone className="w-4 h-4" /> Pay with UPI App (Mobile)
+                  </a>
+                )}
 
                 <div className="p-3.5 rounded-xl bg-[#111524]/60 border border-white/[0.06] space-y-1">
                   <div className="text-[10px] font-mono text-[#64748B] uppercase font-bold">Amount Due</div>

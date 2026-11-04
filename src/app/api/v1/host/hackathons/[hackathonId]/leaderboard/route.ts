@@ -11,8 +11,8 @@ export async function GET(
 ) {
   try {
     const session = await getSession();
-    if (!session || (session.role !== "HOST" && session.role !== "SUPER_ADMIN")) {
-      return NextResponse.json({ error: "Host or Admin clearance required" }, { status: 403 });
+    if (!session || (session.role !== "HOST" && session.role !== "SUPER_ADMIN" && session.role !== "JUDGE")) {
+      return NextResponse.json({ error: "Host, Judge, or Admin clearance required" }, { status: 403 });
     }
 
     const { hackathonId } = params;
@@ -43,6 +43,22 @@ export async function GET(
       }
     }
 
+    if (session.role === "JUDGE") {
+      const judgeAssignment = await prisma.judgeProfile.findFirst({
+        where: {
+          userId: session.userId,
+          hackathonId: hackathon.id,
+          approvalStatus: "APPROVED",
+        },
+      });
+      if (!judgeAssignment) {
+        return NextResponse.json(
+          { error: "Access denied. You are not an approved evaluator for this track." },
+          { status: 403 }
+        );
+      }
+    }
+
     // Fetch all submissions with scores
     const submissions = await prisma.submission.findMany({
       where: {
@@ -57,6 +73,7 @@ export async function GET(
           },
         },
         scores: {
+          where: { isDraft: false },
           include: {
             criterion: true,
             judge: { include: { user: { select: { name: true } } } },

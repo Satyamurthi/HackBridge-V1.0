@@ -376,7 +376,7 @@ export default function MyTeamsPage() {
                   {addingTeammateTo === team.id && (
                     <div className="p-4 rounded-2xl bg-white/[0.02] border border-[#6366F1]/30 space-y-2">
                       <div className="text-[11px] font-mono text-[#94A3B8]">
-                        Enter student&apos;s permanent Hackathon ID (e.g. HB-102938):
+                        Enter student&apos;s permanent Hackathon ID (e.g. HB-XXXXXX):
                       </div>
                       <div className="flex gap-2">
                         <input

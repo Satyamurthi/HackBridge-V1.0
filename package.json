@@ -1,22 +1,30 @@
 {
   "name": "hackbridge",
-  "version": "1.0.0",
+  "version": "5.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000",
+    "dev:v5": "next dev -p 3010",
+    "dev:v4": "next dev -p 3010",
     "build": "next build",
     "start": "next start -p 3000",
+    "start:v5": "next start -p 3010",
+    "start:v4": "next start -p 3010",
+    "start:v3": "next start -p 3010",
     "lint": "next lint",
     "db:push": "prisma db push",
     "db:generate": "prisma generate",
     "db:seed": "tsx prisma/seed.ts",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:loop": "node scripts/test-loop.js",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@prisma/client": "^5.21.1",
     "@react-three/drei": "^9.114.4",
     "@react-three/fiber": "^8.17.10",
+    "@types/qrcode": "^1.5.6",
     "bcryptjs": "^2.4.3",
     "canvas-confetti": "^1.9.3",
     "clsx": "^2.1.1",
@@ -24,10 +32,12 @@
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.453.0",
     "next": "^14.2.15",
+    "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "tailwind-merge": "^2.5.4",
     "three": "^0.169.0",
+    "xlsx": "^0.18.5",
     "zod": "^3.23.8"
   },
   "devDependencies": {

@@ -20,11 +20,11 @@ export async function PATCH(
 
     const { paymentId } = params;
     const body = await req.json();
-    const { action } = body; // "APPROVE" or "REJECT"
+    const { action, utrNumber, txnRef, rejectionReason } = body; // "APPROVE", "REJECT", "UPDATE_UTR"
 
-    if (!["APPROVE", "REJECT"].includes(action)) {
+    if (!["APPROVE", "REJECT", "UPDATE_UTR"].includes(action)) {
       return NextResponse.json(
-        { error: "action must be APPROVE or REJECT" },
+        { error: "action must be APPROVE, REJECT, or UPDATE_UTR" },
         { status: 400 }
       );
     }
@@ -65,8 +65,26 @@ export async function PATCH(
       }
     }
 
+    if (action === "UPDATE_UTR") {
+      const cleanUtr = (utrNumber || txnRef || "").trim();
+      const updated = await prisma.payment.update({
+        where: { id: paymentId },
+        data: {
+          txnRef: cleanUtr || payment.txnRef,
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        action: "UPDATE_UTR",
+        payment: updated,
+        message: "UTR reference updated successfully.",
+      });
+    }
+
     if (action === "APPROVE") {
       const officialTeamId = generateTeamId();
+      const verifiedUtr = (utrNumber || txnRef || "").trim() || payment.txnRef;
 
       await prisma.$transaction(async (tx) => {
         await tx.payment.update({
@@ -75,6 +93,7 @@ export async function PATCH(
             status: "VERIFIED",
             approvedBy: session.userId,
             verifiedAt: new Date(),
+            ...(verifiedUtr ? { txnRef: verifiedUtr } : {}),
           },
         });
 
@@ -92,7 +111,7 @@ export async function PATCH(
         teamId: officialTeamId,
         hackathonTitle: payment.team.hackathon.title,
         amount: payment.amount,
-        txnRef: payment.txnRef,
+        txnRef: verifiedUtr,
         leadEmail: payment.team.leadStudent.user.email,
       });
 
@@ -105,6 +124,7 @@ export async function PATCH(
         metadata: {
           teamId: officialTeamId,
           hackathonTitle: payment.team.hackathon.title,
+          utrNumber: verifiedUtr,
         },
       });
 
@@ -112,6 +132,7 @@ export async function PATCH(
         success: true,
         action: "APPROVE",
         teamId: officialTeamId,
+        utrNumber: verifiedUtr,
         message: `Payment approved! Official Team ID ${officialTeamId} issued.`,
       });
     } else {
@@ -126,16 +147,20 @@ export async function PATCH(
         teamName: payment.team.name,
         hackathonTitle: payment.team.hackathon.title,
         txnRef: payment.txnRef,
+        rejectionReason: rejectionReason || "Payment proof could not be verified",
       });
 
       // Dispatch rejection notification to team lead
       await createNotification(payment.team.leadStudent.userId, "PAYMENT_REJECTED", {
         title: "Payment Verification Rejected",
-        message: `Payment proof for team "${payment.team.name}" was rejected. Please review payment requirements or re-upload.`,
+        message: rejectionReason
+          ? `Payment for team "${payment.team.name}" was rejected: ${rejectionReason}. Please re-submit verification.`
+          : `Payment proof for team "${payment.team.name}" was rejected. Please review payment requirements or re-upload.`,
         link: "/dashboard/student",
         metadata: {
           teamId: payment.teamId,
           hackathonTitle: payment.team.hackathon.title,
+          rejectionReason,
         },
       });
 

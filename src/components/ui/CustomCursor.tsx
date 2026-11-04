@@ -10,11 +10,12 @@ export default function CustomCursor() {
   const [enabled, setEnabled] = useState(false);
 
   useEffect(() => {
-    // Only enable custom cursor on devices with fine pointer and no reduced motion
+    // Only enable custom cursor on devices with fine pointer, not Firefox (to prevent compositor CPU spikes), and no reduced motion
     const hasFinePointer = window.matchMedia("(pointer: fine)").matches;
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const isFirefox = typeof navigator !== "undefined" && /firefox/i.test(navigator.userAgent);
 
-    if (!hasFinePointer || prefersReducedMotion) {
+    if (!hasFinePointer || prefersReducedMotion || isFirefox) {
       return;
     }
 

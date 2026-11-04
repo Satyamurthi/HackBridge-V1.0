@@ -38,6 +38,8 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark" style={{ colorScheme: "dark" }} suppressHydrationWarning>
       <head>
+        <meta httpEquiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()" />
+        <meta name="format-detection" content="telephone=no" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -64,7 +66,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${inter.variable} ${plusJakartaSans.variable} ${jetbrainsMono.variable} antialiased bg-transparent text-[#F8FAFC] min-h-screen flex flex-col font-sans selection:bg-[#6366F1]/40 selection:text-white relative`}
+        className={`${inter.variable} ${plusJakartaSans.variable} ${jetbrainsMono.variable} antialiased min-h-screen flex flex-col font-sans selection:bg-[#6366F1]/40 selection:text-white relative`}
       >
         {/* Fixed full-screen Three.js 3D Background */}
         <Global3DBackground />

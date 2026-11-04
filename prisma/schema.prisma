@@ -12,12 +12,14 @@ datasource db {
 model User {
   id            String          @id @default(uuid())
   email         String          @unique
-  passwordHash  String
+  passwordHash  String?
   role          String          // "STUDENT", "HOST", "JUDGE", "SUPER_ADMIN"
   status        String          @default("ACTIVE") // "ACTIVE", "PENDING", "PAUSED", "REJECTED"
   name          String
   phone         String?
   avatarUrl     String?
+  googleId      String?         @unique // For Google Sign-In
+  provider      String?         @default("credentials") // "credentials", "google"
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
 
@@ -62,6 +64,11 @@ model HostProfile {
   docUrl          String?
   hackId          String?      @unique // Permanent Host ID: HOST-XXXXXX
   rejectionReason String?
+  razorpayKeyId       String?
+  razorpayKeySecret   String?      // stored encrypted
+  upiId               String?
+  bankAccountName     String?
+  qrImageUrl          String?
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 
@@ -78,6 +85,7 @@ model JudgeProfile {
   approvalStatus String       @default("PENDING") // "PENDING", "APPROVED", "REJECTED"
   designation    String?
   company        String?
+  domain         String?      // Assigned evaluation domain (e.g. "Cyber Security", "AI Ops")
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
@@ -106,6 +114,12 @@ model Hackathon {
   status         String            @default("DRAFT") // "DRAFT", "PUBLISHED", "ARCHIVED"
   bannerUrl      String?
   prizePool      String?
+  registrationDeadline DateTime?
+  part1Due       DateTime?
+  part2Due       DateTime?
+  part3Due       DateTime?
+  part4Due       DateTime?
+  githubOrgRepo  String?
   startAt        DateTime
   endAt          DateTime
   createdAt      DateTime          @default(now())
@@ -132,18 +146,33 @@ model Domain {
 
   hackathon         Hackathon          @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
   problemStatements ProblemStatement[]
+  registeredTeams   Team[]             @relation("TeamDomain") // Teams that pre-selected this domain
 
   @@map("domains")
 }
 
 model ProblemStatement {
-  id          String   @id @default(uuid())
-  domainId    String
-  title       String
-  description String
-  cap         Int      @default(0) // Ceil(teams / statements)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String   @id @default(uuid())
+  domainId       String
+  title          String
+  description    String
+  difficulty     String   @default("MEDIUM") // "EASY", "MEDIUM", "HARD"
+  attachmentUrl  String?
+  attachmentName String?
+  cap            Int      @default(0) // Ceil(teams / statements)
+
+  // Document-extracted rich fields
+  code           String?  // e.g. "AO-01", "CC-01", "ER-01", "TRACK-1"
+  overview       String?  // Problem statement overview
+  mission        String?  // Mission statement
+  resources      String?  // Provided datasets & resources
+  metrics        String?  // Success metrics
+  goals          String?  // Goals & stretch goals
+  safetyRules    String?  // Safety, security & compliance boundary
+  evalBoundary   String?  // In-scope / out-of-scope / evaluation boundary
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   domain      Domain   @relation(fields: [domainId], references: [id], onDelete: Cascade)
   teams       Team[]
@@ -156,6 +185,7 @@ model Team {
   teamId             String?           @unique // Generated only after verified payment: TEAM-XXXXXX
   hackathonId        String
   leadStudentId      String
+  domainId           String?           // Team's pre-selected competing domain (chosen during registration)
   problemStatementId String?
   name               String
   status             String            @default("PENDING") // "PENDING", "ACTIVE", "SUBMITTED", "DISQUALIFIED"
@@ -164,10 +194,12 @@ model Team {
 
   hackathon          Hackathon         @relation(fields: [hackathonId], references: [id], onDelete: Cascade)
   leadStudent        StudentProfile    @relation("TeamLead", fields: [leadStudentId], references: [id], onDelete: Cascade)
+  domain             Domain?           @relation("TeamDomain", fields: [domainId], references: [id])
   problemStatement   ProblemStatement? @relation(fields: [problemStatementId], references: [id])
   members            TeamMember[]
   payment            Payment?
   progressUpdates    ProgressUpdate[]
+  documentUploads    DocumentUpload[]
   codeRepo           CodeRepo?
   submission         Submission?
   result             Result?
@@ -210,21 +242,50 @@ model Payment {
 }
 
 model ProgressUpdate {
-  id        String   @id @default(uuid())
-  teamId    String
-  percent   Int      // 10, 20, 30 ... 100
-  note      String
-  createdAt DateTime @default(now())
+  id              String   @id @default(uuid())
+  teamId          String
+  studentId       String?
+  studentName     String?
+  percent         Int      // Member completion percent: 10, 20, 30 ... 100
+  combinedPercent Int?     // Aggregated combined team progress percentage
+  note            String
+  createdAt       DateTime @default(now())
 
   team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   @@map("progress_updates")
 }
 
+model DocumentUpload {
+  id               String   @id @default(uuid())
+  teamId           String
+  stage            Int      // 1 = Part 1, 2 = Part 2, 3 = Part 3, 4 = Part 4
+  version          Int      @default(1) // v1, v2, v3...
+  fileName         String
+  fileSize         Float
+  fileType         String
+  fileUrl          String
+  uploaderId       String
+  uploaderName     String
+  syncStatus       String   @default("Pending") // "Pending", "Synced", "Failed with Retry"
+  syncError        String?
+  githubCommitHash String?
+  githubRepoUrl    String?
+  githubPath       String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  team             Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@map("document_uploads")
+}
+
 model CodeRepo {
   id            String    @id @default(uuid())
   teamId        String    @unique
   githubRepoUrl String?
+  forkedRepoUrl String?
+  liveUrl       String?
   storagePath   String?
   lastPushAt    DateTime?
   commitHash    String?
@@ -277,6 +338,7 @@ model Score {
   criterionId  String
   score        Float
   notes        String?
+  isDraft      Boolean         @default(false)
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
 
@@ -306,15 +368,27 @@ model Result {
 }
 
 model SiteContent {
+  id              String   @id @default(uuid())
+  key             String   @unique
+  jsonValue       String   // Published serialized JSON content blocks
+  draftJsonValue  String?  // Draft serialized JSON content blocks
+  version         Int      @default(1)
+  published       Boolean  @default(true)
+  history         String?  // JSON serialized version history
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("site_content")
+}
+
+model SiteSetting {
   id        String   @id @default(uuid())
   key       String   @unique
-  jsonValue String   // Serialized JSON content blocks
-  version   Int      @default(1)
-  published Boolean  @default(true)
+  value     String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("site_content")
+  @@map("site_settings")
 }
 
 model AuditLog {

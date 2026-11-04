@@ -19,13 +19,13 @@
 }
 
 html.light {
-  /* Optional Light Mode Toggle */
+  /* Light Mode */
   --bg-void: #F8FAFC;
-  --bg-surface: rgba(255, 255, 255, 0.9);
+  --bg-surface: #FFFFFF;
   --bg-surface-elevated: #F1F5F9;
   --text-primary: #0F172A;
   --text-secondary: #475569;
-  --text-muted: #94A3B8;
+  --text-muted: #64748B;
   --color-primary: #6366F1;
   --color-primary-hover: #4F46E5;
   --border-subtle: rgba(15, 23, 42, 0.08);
@@ -35,14 +35,23 @@ html.light {
 }
 
 html {
-  background-color: transparent !important;
+  background-color: var(--bg-void);
+  color: var(--text-primary);
+  color-scheme: dark;
+}
+
+html.light {
+  background-color: #F8FAFC;
+  color: #0F172A;
+  color-scheme: light;
 }
 
 body {
-  background-color: transparent !important;
+  background-color: var(--bg-void);
   color: var(--text-primary);
   overflow-x: hidden;
   min-height: 100vh;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 /* Semi-transparent Glass Panels to reveal the Global 3D Canvas */
@@ -78,13 +87,172 @@ body {
   transform: translateY(-2px);
 }
 
-/* Static Dotted Gradient Fallback (for reduced motion or non-WebGL) */
+/* Light Mode Overrides */
+html.light .glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(15, 23, 42, 0.08);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+}
+
+html.light .glass-panel-architectural {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(15, 23, 42, 0.1);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+}
+
+html.light .glass-card-interactive {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(15, 23, 42, 0.08);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+}
+
+html.light .glass-card-interactive:hover {
+  background: #FFFFFF;
+  border-color: rgba(99, 102, 241, 0.4);
+  box-shadow: 0 16px 36px -8px rgba(99, 102, 241, 0.18);
+}
+
+html.light header {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.04);
+}
+
+html.light header a,
+html.light header span:not([class*="bg-[#6366F1]"]),
+html.light header button:not([class*="bg-[#6366F1]"]) {
+  color: #0F172A;
+}
+
+html.light header .text-\[\#F8FAFC\] {
+  color: #0F172A !important;
+}
+
+html.light header .text-\[\#94A3B8\] {
+  color: #475569 !important;
+}
+
+html.light header .bg-\[\#030407\]\/95,
+html.light header .bg-\[\#030407\]\/85,
+html.light header .bg-\[\#030407\]\/65 {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+}
+
+html.light footer {
+  background-color: rgba(255, 255, 255, 0.85) !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+html.light footer .text-\[\#F8FAFC\],
+html.light footer .text-white {
+  color: #0F172A !important;
+}
+
+html.light footer .text-\[\#94A3B8\],
+html.light footer .text-\[\#64748B\],
+html.light footer .text-slate-400 {
+  color: #64748B !important;
+}
+
+html.light h1,
+html.light h2,
+html.light h3,
+html.light h4,
+html.light h5,
+html.light h6 {
+  color: #0F172A !important;
+}
+
+html.light .text-white,
+html.light .text-\[\#F8FAFC\],
+html.light .text-\[\#FFFFFF\] {
+  color: #0F172A !important;
+}
+
+html.light .text-slate-400,
+html.light .text-slate-300,
+html.light .text-\[\#94A3B8\],
+html.light .text-\[\#A8A8A8\] {
+  color: #475569 !important;
+}
+
+html.light .text-slate-500,
+html.light .text-\[\#64748B\] {
+  color: #64748B !important;
+}
+
+html.light .bg-\[\#0B0E18\],
+html.light .bg-\[\#030407\],
+html.light .bg-\[\#080808\],
+html.light .bg-\[\#0a0a0a\],
+html.light .bg-\[\#030303\],
+html.light .bg-\[\#111524\],
+html.light .bg-\[\#151515\] {
+  background-color: #FFFFFF !important;
+}
+
+html.light .bg-\[\#030407\]\/60,
+html.light .bg-\[\#0B0E18\]\/80,
+html.light .bg-\[\#0B0E18\]\/90 {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+}
+
+html.light .bg-white\/\[0\.04\],
+html.light .bg-white\/\[0\.05\],
+html.light .bg-white\/\[0\.06\],
+html.light .bg-white\/\[0\.08\],
+html.light .bg-white\/5,
+html.light .bg-white\/10 {
+  background-color: rgba(15, 23, 42, 0.04) !important;
+}
+
+html.light .border-white\/\[0\.06\],
+html.light .border-white\/\[0\.08\],
+html.light .border-white\/\[0\.1\],
+html.light .border-white\/\[0\.12\],
+html.light .border-white\/\[0\.15\],
+html.light .border-white\/5,
+html.light .border-white\/10,
+html.light .border-white\/15,
+html.light .border-white\/20 {
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+/* Ensure indigo CTA buttons retain high contrast white text */
+html.light button.bg-\[\#6366F1\],
+html.light a.bg-\[\#6366F1\],
+html.light .bg-\[\#6366F1\],
+html.light button.bg-indigo-600,
+html.light a.bg-indigo-600,
+html.light .bg-indigo-600 {
+  color: #FFFFFF !important;
+}
+html.light button.bg-\[\#6366F1\] *,
+html.light a.bg-\[\#6366F1\] *,
+html.light .bg-\[\#6366F1\] * {
+  color: #FFFFFF !important;
+}
+
+/* Canvas opacity tuning in light mode */
+html.light canvas {
+  opacity: 0.35;
+  filter: contrast(120%);
+}
+
+/* Static Dotted Gradient Fallback */
 .bg-dotted-gradient {
   background-color: #030407;
   background-image: 
     radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.12) 0%, transparent 60%),
     radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
   background-size: 100% 100%, 28px 28px;
+}
+
+html.light .bg-dotted-gradient {
+  background-color: #F8FAFC;
+  background-image: 
+    radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.10) 0%, transparent 60%),
+    radial-gradient(rgba(15, 23, 42, 0.06) 1px, transparent 1px);
 }
 
 /* Custom Scrollbar in Indigo */
@@ -94,11 +262,11 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #030407;
+  background: var(--bg-void);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(148, 163, 184, 0.3);
   border-radius: 4px;
 }
 

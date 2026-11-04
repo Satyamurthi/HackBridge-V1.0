@@ -3,7 +3,8 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Copy, Check, ArrowRight, AlertCircle, Share2, CheckCircle2 } from "lucide-react";
+import { Copy, Check, ArrowRight, AlertCircle, Share2, CheckCircle2, Building } from "lucide-react";
+import GoogleSignInButton from "@/components/auth/GoogleSignInButton";
 
 export default function StudentSignupPage() {
   const [name, setName] = useState("");
@@ -91,10 +92,24 @@ export default function StudentSignupPage() {
           </div>
         </div>
 
-        <div className="pt-8 border-t border-white/[0.06] text-[11px] font-mono text-slate-500">
-          Already registered?{" "}
-          <Link href="/login" className="text-white hover:underline">
-            Sign In here
+        <div className="pt-8 border-t border-white/[0.06] text-[11px] font-mono text-slate-500 space-y-3">
+          <div className="flex items-center justify-between">
+            <span>Already registered?</span>
+            <Link href="/login" className="text-white hover:underline">
+              Sign In here
+            </Link>
+          </div>
+          <Link
+            href="/register/college"
+            className="w-full py-2 px-3 rounded-lg bg-white/[0.03] hover:bg-white/[0.07] border border-white/10 text-white font-medium text-[11px] flex items-center justify-between transition-colors group"
+          >
+            <span className="flex items-center gap-1.5 text-slate-300 group-hover:text-white">
+              <Building className="w-3.5 h-3.5 text-[#818CF8]" />
+              Collegiate Arena Host?
+            </span>
+            <span className="text-[#818CF8] font-bold group-hover:translate-x-0.5 transition-transform">
+              Host Registration →
+            </span>
           </Link>
         </div>
       </div>
@@ -162,6 +177,23 @@ export default function StudentSignupPage() {
                 </p>
               </div>
 
+              {/* Prompt 10: Register with Google */}
+              <div className="space-y-4">
+                <GoogleSignInButton
+                  role="STUDENT"
+                  action="register"
+                  label="Sign up with Google (Instant ID)"
+                />
+
+                <div className="relative flex items-center justify-center">
+                  <div className="border-t border-white/[0.08] w-full" />
+                  <span className="bg-[#0B0E18] px-3 text-[10px] font-mono text-[#64748B] uppercase tracking-wider shrink-0">
+                    or register with institutional email
+                  </span>
+                  <div className="border-t border-white/[0.08] w-full" />
+                </div>
+              </div>
+
               {error && (
                 <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-300 flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 flex-shrink-0" />
@@ -179,7 +211,7 @@ export default function StudentSignupPage() {
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Priya Sundaram"
+                    placeholder="Full Legal Name"
                     className="w-full px-4 py-2.5 rounded-xl bg-[#0B0E18] border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-[#6366F1] transition-colors"
                   />
                 </div>
@@ -280,6 +312,21 @@ export default function StudentSignupPage() {
                 Already hold a Hackathon ID?{" "}
                 <Link href="/login" className="text-white underline underline-offset-4 hover:text-[#6366F1] transition-colors">
                   Sign In
+                </Link>
+              </div>
+
+              {/* Host Registration Navigation Button */}
+              <div className="pt-4 border-t border-white/[0.06] space-y-2">
+                <div className="text-center text-[10px] font-mono uppercase tracking-wider text-slate-500">
+                  Collegiate Chapter or Event Organizer?
+                </div>
+                <Link
+                  href="/register/college"
+                  className="w-full py-2.5 px-4 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-[#6366F1]/50 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all group shadow-sm"
+                >
+                  <Building className="w-4 h-4 text-[#818CF8] group-hover:scale-110 transition-transform" />
+                  <span>Navigate to Host Registration</span>
+                  <ArrowRight className="w-3.5 h-3.5 text-[#818CF8] group-hover:translate-x-1 transition-transform" />
                 </Link>
               </div>
             </>

@@ -79,3 +79,68 @@ export async function PATCH(
     return NextResponse.json({ error: "Failed to update judge status" }, { status: 500 });
   }
 }
+
+// DELETE /api/v1/host/judges/[judgeId] — Host or admin removes/deletes a judge from a hackathon
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: { judgeId: string } }
+) {
+  try {
+    const session = await getSession();
+    if (!session || (session.role !== "HOST" && session.role !== "SUPER_ADMIN")) {
+      return NextResponse.json({ error: "Host or Admin clearance required" }, { status: 403 });
+    }
+
+    const { judgeId } = params;
+
+    const judge = await prisma.judgeProfile.findUnique({
+      where: { id: judgeId },
+      include: {
+        hackathon: true,
+        user: { select: { id: true, name: true, email: true } },
+      },
+    });
+
+    if (!judge) {
+      return NextResponse.json({ error: "Judge profile not found" }, { status: 404 });
+    }
+
+    // Verify host ownership
+    if (session.role === "HOST") {
+      const host = await prisma.hostProfile.findUnique({
+        where: { userId: session.userId },
+      });
+      if (!host || judge.hackathon.hostId !== host.id) {
+        return NextResponse.json(
+          { error: "You can only manage judges for your own hackathon track" },
+          { status: 403 }
+        );
+      }
+    }
+
+    // Delete the judge profile (scores cascade delete)
+    await prisma.judgeProfile.delete({
+      where: { id: judgeId },
+    });
+
+    await writeAuditLog(
+      session.userId,
+      "JUDGE_DELETED",
+      "judge",
+      judgeId,
+      {
+        judgeName: judge.user.name,
+        judgeEmail: judge.user.email,
+        hackathonTitle: judge.hackathon.title,
+      }
+    );
+
+    return NextResponse.json({
+      success: true,
+      message: `Judge ${judge.user.name} removed from ${judge.hackathon.title}.`,
+    });
+  } catch (error: any) {
+    console.error("[Judge DELETE Error]:", error);
+    return NextResponse.json({ error: "Failed to remove judge" }, { status: 500 });
+  }
+}

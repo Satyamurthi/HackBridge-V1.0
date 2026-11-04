@@ -17,9 +17,13 @@ import {
   ArrowRight, 
   Copy, 
   Check, 
-  ShieldCheck,
-  FileCheck
+  ShieldCheck, 
+  FileCheck,
+  Clock,
+  LogIn,
+  UserPlus
 } from "lucide-react";
+import GoogleSignInButton from "@/components/auth/GoogleSignInButton";
 
 export default function RegisterCollegePage() {
   const router = useRouter();
@@ -186,10 +190,30 @@ export default function RegisterCollegePage() {
           </div>
         </div>
 
-        <div className="pt-8 border-t border-white/[0.08] text-xs font-mono text-[#94A3B8] flex items-center justify-between">
-          <span>Already registered?</span>
-          <Link href="/login" className="text-[#818CF8] hover:underline font-bold">
-            Sign In to Host Console →
+        <div className="pt-8 border-t border-white/[0.08] text-xs font-mono text-[#94A3B8] space-y-3">
+          <div className="flex items-center justify-between">
+            <span>Already registered?</span>
+            <div className="flex items-center gap-2">
+              <Link href="/login?role=HOST" className="text-[#818CF8] hover:underline font-bold">
+                Host Sign In
+              </Link>
+              <span>·</span>
+              <Link href="/login?role=STUDENT" className="text-emerald-400 hover:underline font-bold">
+                Student Sign In
+              </Link>
+            </div>
+          </div>
+          <Link
+            href="/signup/student"
+            className="w-full py-2 px-3 rounded-lg bg-white/[0.03] hover:bg-white/[0.07] border border-white/10 text-white font-medium text-[11px] flex items-center justify-between transition-colors group"
+          >
+            <span className="flex items-center gap-1.5 text-slate-300 group-hover:text-white">
+              <UserPlus className="w-3.5 h-3.5 text-[#818CF8]" />
+              Participate as Student?
+            </span>
+            <span className="text-[#818CF8] font-bold group-hover:translate-x-0.5 transition-transform">
+              Student Registration →
+            </span>
           </Link>
         </div>
       </div>
@@ -234,6 +258,33 @@ export default function RegisterCollegePage() {
                 </p>
               </div>
 
+              {/* Admin Approval Notice & Contact Card */}
+              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-left space-y-2">
+                <div className="flex items-center gap-2 text-xs font-mono font-bold text-amber-300 uppercase tracking-wider">
+                  <Clock className="w-4 h-4 text-amber-400" />
+                  <span>Waiting for Admin Approval</span>
+                </div>
+                <p className="text-[11px] font-mono text-amber-200/90 leading-relaxed">
+                  Only approved hosts can access or host hackathons. To activate your collegiate chapter immediately, please contact <a href="tel:9380968402" className="text-white font-bold underline hover:text-[#818CF8]">9380968402</a> or <a href="mailto:admin@hackbridge.dev" className="text-white font-bold underline hover:text-[#818CF8]">Admin</a>.
+                </p>
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <a
+                    href="tel:9380968402"
+                    className="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 text-[10px] font-mono font-bold border border-amber-500/40 transition-colors flex items-center gap-1.5"
+                  >
+                    📞 Call 9380968402
+                  </a>
+                  <a
+                    href="https://wa.me/919380968402?text=Hello%20Admin,%20my%20college%20chapter%20registration%20is%20waiting%20for%20approval."
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-[10px] font-mono font-bold border border-emerald-500/40 transition-colors flex items-center gap-1.5"
+                  >
+                    💬 WhatsApp Admin
+                  </a>
+                </div>
+              </div>
+
               <div className="pt-2 flex flex-col sm:flex-row items-center gap-3">
                 <Link
                   href="/dashboard/host"
@@ -249,10 +300,20 @@ export default function RegisterCollegePage() {
                   Sign In Later
                 </Link>
               </div>
+
+              <div className="pt-3 border-t border-white/[0.06] flex items-center justify-between text-xs font-mono text-[#94A3B8]">
+                <Link href="/login?role=STUDENT" className="hover:text-emerald-400 transition-colors">
+                  Student Sign In →
+                </Link>
+                <Link href="/signup/student" className="text-[#818CF8] hover:underline font-bold">
+                  Student Registration / Sign Up →
+                </Link>
+              </div>
             </div>
           ) : (
             /* Registration Form */
-            <form onSubmit={handleSubmit} className="p-7 sm:p-9 rounded-3xl bg-[#0B0E18]/65 backdrop-blur-md border border-white/[0.08] space-y-6">
+            <>
+              <form onSubmit={handleSubmit} className="p-7 sm:p-9 rounded-3xl bg-[#0B0E18]/65 backdrop-blur-md border border-white/[0.08] space-y-6">
               <div className="space-y-1">
                 <div className="flex items-center gap-2 text-xs font-mono text-[#818CF8]">
                   <span>STEP 1 OF 1</span>
@@ -265,6 +326,24 @@ export default function RegisterCollegePage() {
                 <p className="text-xs text-[#94A3B8]">
                   Fill in your collegiate details to apply for hackathon host privileges.
                 </p>
+              </div>
+
+              {/* Prompt 10: Continue with Google */}
+              <div className="space-y-4">
+                <GoogleSignInButton
+                  role="HOST"
+                  orgType="college"
+                  action="register"
+                  label="Register College Chapter with Google"
+                />
+
+                <div className="relative flex items-center justify-center">
+                  <div className="border-t border-white/[0.08] w-full" />
+                  <span className="bg-[#0B0E18] px-3 text-[10px] font-mono text-[#64748B] uppercase tracking-wider shrink-0">
+                    or register with institutional email
+                  </span>
+                  <div className="border-t border-white/[0.08] w-full" />
+                </div>
               </div>
 
               {formError && (
@@ -518,12 +597,53 @@ export default function RegisterCollegePage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3.5 rounded-xl bg-[#6366F1] hover:bg-[#4F46E5] disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-md shadow-indigo-500/20 flex items-center justify-center gap-2"
+                className="w-full py-3.5 rounded-xl bg-[#6366F1] hover:bg-[#4F46E5] disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-md shadow-indigo-500/20 flex items-center justify-center gap-2 cursor-pointer"
               >
                 {loading ? "Registering University Chapter..." : "Submit College Application"}
                 <ArrowRight className="w-4 h-4" />
               </button>
             </form>
+
+            {/* Authentication & Student Registration Portal Links */}
+            <div className="pt-6 border-t border-white/[0.08] space-y-3 font-mono text-xs">
+              <div className="text-center text-[10px] uppercase tracking-wider text-[#64748B]">
+                Access Existing Account or Register as Student
+              </div>
+
+              {/* Host Sign In and Student Sign In */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Link
+                  href="/login?role=HOST"
+                  className="py-2.5 px-4 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-[#818CF8]/40 text-[#F8FAFC] text-xs font-bold flex items-center justify-center gap-2 transition-all group"
+                >
+                  <Building className="w-4 h-4 text-[#818CF8]" />
+                  <span>Host Sign In</span>
+                  <ArrowRight className="w-3.5 h-3.5 text-[#818CF8] group-hover:translate-x-0.5 transition-transform" />
+                </Link>
+
+                <Link
+                  href="/login?role=STUDENT"
+                  className="py-2.5 px-4 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-emerald-400/40 text-[#F8FAFC] text-xs font-bold flex items-center justify-center gap-2 transition-all group"
+                >
+                  <LogIn className="w-4 h-4 text-emerald-400" />
+                  <span>Student Sign In</span>
+                  <ArrowRight className="w-3.5 h-3.5 text-emerald-400 group-hover:translate-x-0.5 transition-transform" />
+                </Link>
+              </div>
+
+              {/* Below that: Student Registration / Sign Up */}
+              <div className="pt-1">
+                <Link
+                  href="/signup/student"
+                  className="w-full py-2.5 px-4 rounded-xl bg-[#6366F1]/10 hover:bg-[#6366F1]/20 border border-[#6366F1]/30 hover:border-[#6366F1]/60 text-[#818CF8] hover:text-white text-xs font-bold flex items-center justify-center gap-2 transition-all group shadow-sm"
+                >
+                  <UserPlus className="w-4 h-4 text-[#818CF8]" />
+                  <span>Student Registration / Sign Up</span>
+                  <ArrowRight className="w-3.5 h-3.5 text-[#818CF8] group-hover:translate-x-1 transition-transform" />
+                </Link>
+              </div>
+            </div>
+            </>
           )}
         </div>
       </div>
