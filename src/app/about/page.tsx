@@ -55,7 +55,7 @@ const TECHNICAL_TEAM: TeamMember[] = [
     name: "Prof. Shreenidhi N Koppal",
     designation: "Assistant Professor",
     role: "Technical FSD (Architecture & Core Services)",
-    image: "/images/developers/sreenidhi-square.png",
+    image: "/images/developers/sreenidhi-face.jpg",
     github: "https://github.com/Satyamurthi",
     linkedin: "https://www.linkedin.com/in/shreenidhi-n-koppal-koppal-0ab295211/",
     department: "Dept. of CS&E (AI & ML)",
@@ -64,7 +64,7 @@ const TECHNICAL_TEAM: TeamMember[] = [
     name: "Prof. Shivumanjesh P",
     designation: "Assistant Professor",
     role: "Technical FSD (Backend APIs & Data Pipeline)",
-    image: "/images/developers/Shivamanjesh-square.png",
+    image: "/images/developers/Shivamanjesh-face.jpg",
     github: "https://github.com/shivamanjesh",
     linkedin: "https://www.linkedin.com/in/shivamanjesh-p-2778401b4/",
     department: "Dept. of Computer Science & Engineering",
@@ -73,7 +73,7 @@ const TECHNICAL_TEAM: TeamMember[] = [
     name: "Prof. Bharath Bharadwaj B S",
     designation: "Assistant Professor",
     role: "Technical Frontend (UI/UX Engineering & State Management)",
-    image: "/images/developers/bharath-square.png",
+    image: "/images/developers/bharath-face.jpg",
     github: "https://github.com/bharathbharadwaj",
     linkedin: "https://www.linkedin.com/in/bharath-bharadwaj-b-s-37213b19b/",
     department: "Dept. of Computer Science & Engineering",
@@ -82,7 +82,7 @@ const TECHNICAL_TEAM: TeamMember[] = [
     name: "Prof. Karthik V S",
     designation: "Assistant Professor",
     role: "Technical FSD (Infrastructure, Database & Auth)",
-    image: "/images/developers/karthik-Medium-square.png",
+    image: "/images/developers/karthik-Medium-face.jpg",
     github: "https://github.com/karthikvs",
     linkedin: "https://www.linkedin.com/in/karthik-v-s-761a29124/",
     department: "Dept. of Computer Science & Engineering",
@@ -104,7 +104,7 @@ const SPARK_IGNITORS: TeamMember[] = [
     designation: "Professor & HOD, CSE",
     role: "Departmental Chair & Mentor",
     department: "MIT Thandavapura",
-    image: "/images/IdeaSpark/ranjith_new-Medium-square.png",
+    image: "/images/IdeaSpark/ranjith_new-Medium-face.jpg",
     email: "hodcse@mitmysore.in",
   },
   {
@@ -112,7 +112,7 @@ const SPARK_IGNITORS: TeamMember[] = [
     designation: "Associate Professor & HOD, AI & ML",
     role: "AI & ML Academic Chair & Mentor",
     department: "MIT Thandavapura",
-    image: "/images/IdeaSpark/Dr.Sunil-C_new-Medium-square.png",
+    image: "/images/IdeaSpark/Dr.Sunil-C_new-Medium-face.jpg",
     email: "hodaiandml@gmail.com",
     phone: "+91 9739459309",
   },
@@ -285,13 +285,13 @@ export default function AboutPage() {
               className="group relative flex flex-col justify-between overflow-hidden rounded-2xl bg-[#0B0E18] border border-white/[0.08] hover:border-[#6366F1]/50 transition-all duration-300 shadow-sm hover:shadow-xl h-full"
             >
               <div>
-                {/* Photo — square frame, face-centered */}
-                <div className="relative aspect-square w-full overflow-hidden bg-slate-900 flex items-center justify-center">
+                {/* Photo — 3:4 portrait frame, face at top */}
+                <div className="relative aspect-[3/4] w-full overflow-hidden bg-slate-900 flex items-center justify-center">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={member.image}
                     alt={member.name}
-                    className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+                    className="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-105"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#0B0E18] via-transparent to-transparent opacity-85 pointer-events-none" />
                   <div className="absolute top-3 right-3 px-2.5 py-0.5 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-[10px] font-mono text-indigo-300">
@@ -385,13 +385,13 @@ export default function AboutPage() {
               className="group relative flex flex-col justify-between overflow-hidden rounded-2xl bg-[#0B0E18] border border-white/[0.08] hover:border-amber-400/50 transition-all duration-300 shadow-sm hover:shadow-xl h-full"
             >
               <div>
-                {/* Photo — square frame, face-centered */}
-                <div className="relative aspect-square w-full overflow-hidden bg-slate-900 flex items-center justify-center">
+                {/* Photo — 3:4 portrait frame, face at top */}
+                <div className="relative aspect-[3/4] w-full overflow-hidden bg-slate-900 flex items-center justify-center">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={coord.image}
                     alt={coord.name}
-                    className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+                    className="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-105"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#0B0E18] via-transparent to-transparent opacity-85 pointer-events-none" />
                   <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-[9px] font-mono text-amber-300">
