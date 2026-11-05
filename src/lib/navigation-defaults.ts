@@ -49,7 +49,7 @@ export interface SiteNavigationConfig {
 export const DEFAULT_NAVBAR_CONFIG: NavbarConfig = {
   brandName: "HackBridge",
   brandLogoUrl: "/brand/hackbridge-mark.png",
-  versionTag: "v1.0",
+  versionTag: "",
   announcement: {
     enabled: false,
     text: "Welcome to HackBridge: The collegiate engineering arena infrastructure.",
@@ -97,7 +97,7 @@ export const DEFAULT_FOOTER_CONFIG: FooterConfig = {
   brandName: "HackBridge",
   brandDescription:
     "The collegiate engineering infrastructure for high-stakes competitive hackathons. Permanent credentials, atomic problem statement reveals, and automated GitHub repository synchronization.",
-  statusText: "Core Protocol Operational · v1.0.4 Production",
+  statusText: "Core Protocol Operational",
   columns: [
     {
       title: "Platform",

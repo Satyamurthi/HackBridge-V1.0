@@ -226,7 +226,8 @@ describe("Phase 12: Super Admin Privileges — Deletion, Full Editing & Dynamic 
   describe("3. Dynamic Navigation & Footer Configuration", () => {
     it("provides fallback defaults matching HackBridge protocol specification", () => {
       expect(DEFAULT_NAVBAR_CONFIG.brandName).toBe("HackBridge");
-      expect(DEFAULT_NAVBAR_CONFIG.versionTag).toBe("v1.0");
+      // versionTag intentionally cleared per user request (UI badge removed)
+      expect(DEFAULT_NAVBAR_CONFIG.versionTag).toBe("");
       expect(DEFAULT_NAVBAR_CONFIG.publicNavLinks.length).toBeGreaterThan(0);
       expect(DEFAULT_FOOTER_CONFIG.brandName).toBe("HackBridge");
       expect(DEFAULT_FOOTER_CONFIG.columns.length).toBe(3);

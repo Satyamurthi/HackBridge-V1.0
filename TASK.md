@@ -1757,3 +1757,13 @@ Each of the 13 Cyber Security teams in the CSV was audited against database reco
 
 
 
+
+
+## Test Edit Justification Log
+
+### Edit: `tests/phase12-super-admin-delete-edit-navigation.test.ts` line 229
+
+- **Date**: 2026-11-05
+- **Reason**: User explicitly requested removal of the version tag badge (e.g., "v5.0" / "v1.0") from the navbar UI. This required changing `DEFAULT_NAVBAR_CONFIG.versionTag` from `"v1.0"` to `""` in `src/lib/navigation-defaults.ts`. The test at line 229 was asserting the old hardcoded default value `"v1.0"`, which is now incorrect by design. The test has been updated to assert `""` to match the new intended default.
+- **Proven wrong**: Yes — the test was asserting a specific UI string that the user explicitly requested to remove. The test logic (checking defaults exist and match spec) remains valid; only the expected value changed.
+
