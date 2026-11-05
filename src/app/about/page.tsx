@@ -140,7 +140,7 @@ const COLLABORATING_BODIES: CollaboratingBody[] = [
     type: "Collegiate Academic Institution",
     category: "Academic Collegiate Host",
     tagline: "Department of CS&E & Department of CS&E (AI & ML)",
-    logo: "/images/collaborations/mitt-logo.png",
+    logo: "/images/collaborations/mit-logo.png",
     logoContainerClass: "bg-white border border-slate-200/80 shadow-sm",
     website: "https://mitt.edu.in",
     description:
@@ -172,7 +172,7 @@ const COLLABORATING_BODIES: CollaboratingBody[] = [
     type: "Cloud Architecture Enterprise",
     category: "Cloud Infrastructure & Ecosystem Partner",
     tagline: "Enterprise Cloud, Hybrid Architecture & AI-Ops Systems",
-    logo: "/images/collaborations/cynefian-logo.png",
+    logo: "/images/collaborations/cynefian.a6468e65420181555a92.png",
     logoContainerClass: "bg-[#060913] border border-white/10 shadow-sm",
     website: "https://cynefian.com",
     description:

@@ -1,120 +1,29 @@
-HACKBRIDGE PERSONAL LICENSE
-Copyright (c) 2026 Prof. Shreenidhi N Koppal
-Maharaja Institute of Technology Thandavapura (MITT)
-Department of CS&E (AI & ML), Mysore, Karnataka, India
+MIT License
 
-All rights reserved.
+Copyright (c) 2026 Maharaja Institute of Technology Thandavapura (MITT)
+Department of CS&E and Department of CS&E (AI & ML)
 
-================================================================================
-                          PERSONAL USE LICENSE
-================================================================================
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-This software and its associated documentation files (the "Software") are the
-exclusive intellectual property of Prof. Shreenidhi N Koppal and the HackBridge
-Technical Team at Maharaja Institute of Technology Thandavapura (MITT).
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
-GRANT OF LICENSE
-----------------
-Subject to the terms and conditions of this License, the copyright holder grants
-you a limited, non-exclusive, non-transferable, personal license to:
-
-  1. Use the Software solely for personal, educational, and non-commercial
-     purposes within the institutional context of MITT and its affiliated
-     academic programs.
-
-  2. View and study the source code for educational and reference purposes.
-
-  3. Run the Software internally within MITT, Vigyanlabs Innovations, and
-     Cynefian Technologies for the purpose of conducting collegiate hackathons
-     and related academic activities.
-
-RESTRICTIONS
-------------
-You may NOT, without prior written permission from the copyright holder:
-
-  1. Copy, modify, merge, publish, distribute, sublicense, or sell copies of
-     the Software or any derivative works thereof.
-
-  2. Use the Software, its name, branding, or any part of its codebase for
-     any commercial purpose or for monetary gain.
-
-  3. Remove or alter any proprietary notices, labels, or marks on the Software.
-
-  4. Transfer, assign, or sublicense your rights under this License to any
-     third party.
-
-  5. Deploy the Software publicly outside of its designated institutional
-     environment without explicit written authorization.
-
-  6. Reverse engineer, decompile, or disassemble any compiled portions of the
-     Software, except as permitted by applicable law.
-
-OWNERSHIP
----------
-The Software, including all intellectual property rights therein, remains the
-sole and exclusive property of Prof. Shreenidhi N Koppal and the HackBridge
-Technical Team. This License does not grant you any ownership rights in the
-Software.
-
-TRIPARTITE COLLABORATION ACKNOWLEDGEMENT
------------------------------------------
-This Software was developed in collaboration with:
-
-  · Maharaja Institute of Technology Thandavapura (MITT)
-    — Academic Collegiate Host
-    — Department of CS&E & Department of CS&E (AI & ML)
-    — https://mitt.edu.in
-
-  · Vigyanlabs Innovations
-    — Industry Technology Partner
-    — Enterprise Cloud, Server Telemetry & Intelligent Green Computing
-    — https://vigyanlabs.com
-
-  · Cynefian Technologies
-    — Cloud Infrastructure & Ecosystem Partner
-    — Enterprise Cloud, Hybrid Architecture & AI-Ops Systems
-    — https://cynefian.com
-
-The collaboration acknowledgement does not transfer any ownership or licensing
-rights to the above entities beyond those explicitly stated herein.
-
-DISCLAIMER OF WARRANTIES
--------------------------
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. THE COPYRIGHT HOLDER
-MAKES NO REPRESENTATIONS OR WARRANTIES REGARDING THE ACCURACY, RELIABILITY,
-OR COMPLETENESS OF THE SOFTWARE.
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
-LIMITATION OF LIABILITY
-------------------------
-IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY
-DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+---
 
-GOVERNING LAW
--------------
-This License shall be governed by and construed in accordance with the laws of
-Karnataka, India. Any disputes arising under or in connection with this License
-shall be subject to the exclusive jurisdiction of the courts located in
-Mysore, Karnataka, India.
-
-CONTACT
--------
-For permissions, licensing inquiries, or further information, contact:
-
-  Prof. Shreenidhi N Koppal
-  Department of CS&E (AI & ML)
-  Maharaja Institute of Technology Thandavapura (MITT)
-  Mysore, Karnataka, India
-  GitHub : https://github.com/Satyamurthi
-  LinkedIn: https://www.linkedin.com/in/shreenidhi-n-koppal-koppal-0ab295211/
-
-================================================================================
-                     © 2026 Prof. Shreenidhi N Koppal
-                  HackBridge — All Rights Reserved
-================================================================================
+Developed in collaboration with:
+  · Maharaja Institute of Technology Thandavapura (MITT) — Academic Collegiate Host
+  · Vigyanlabs Innovations                              — Industry Technology Partner
+  · Cynefian Technologies                               — Cloud Infrastructure & Ecosystem Partner
