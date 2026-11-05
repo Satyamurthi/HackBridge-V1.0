@@ -6,7 +6,7 @@
 
 **Architectural Infrastructure for High-Stakes Hackathons**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-indigo.svg)](./LICENSE)
+[![License: Personal](https://img.shields.io/badge/License-Personal-blueviolet.svg)](./LICENSE)
 [![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js)](https://nextjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)](https://www.typescriptlang.org)
 [![Tests](https://img.shields.io/badge/Tests-153%2F153%20passing-brightgreen)](#)
